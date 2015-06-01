@@ -1,5 +1,5 @@
 Package: xml2
-Version: 0.1.0
+Version: 0.1.1
 Title: Parse XML
 Description: Work with XML files using a simple, consistent interface. Built on
   top of the 'libxml2' C library.
@@ -15,12 +15,12 @@ Imports: Rcpp
 LinkingTo: Rcpp (>= 0.11.4.6), BH
 Suggests: testthat, curl
 License: GPL (>= 2)
-Packaged: 2015-04-20 19:36:32 UTC; hadley
+NeedsCompilation: yes
+Packaged: 2015-06-01 13:29:35 UTC; hadley
 Author: Hadley Wickham [aut, cre],
   Jeroen Ooms [ctb],
   RStudio [cph],
   R Foundation [ctb] (Copy of R-project homepage cached as example)
 Maintainer: Hadley Wickham <hadley@rstudio.com>
-NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2015-04-20 22:43:45
+Date/Publication: 2015-06-02 16:59:30

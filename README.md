@@ -4,8 +4,11 @@ The xml2 package is a binding to [libxml2](http://xmlsoft.org), making it easy t
 
 ## Installation
 
-xml2 is not yet available from CRAN, but you can install it from github with:
-
+You can install xml2 from CRAN, 
+```R
+install.packages("xml2")
+```
+or you can install the development version from github, using `devtools`:
 ```R
 # install.packages("devtools")
 devtools::install_github("RcppCore/Rcpp")
@@ -16,7 +19,7 @@ devtools::install_github("hadley/xml2")
 
 ```R
 library("xml2")
-x <- xml("<foo> <bar> text <baz/> </bar> </foo>")
+x <- read_xml("<foo> <bar> text <baz/> </bar> </foo>")
 x
 
 xml_name(x)
@@ -24,7 +27,7 @@ xml_children(x)
 xml_text(x)
 xml_find_all(x, ".//baz")
 
-h <- html("<html><p>Hi <b>!")
+h <- read_html("<html><p>Hi <b>!")
 h
 xml_name(h)
 xml_text(h)
