@@ -4,9 +4,14 @@
 #include <Rcpp.h>
 #include <libxml/tree.h>
 #include <boost/shared_ptr.hpp>
+#include <map>
 
 inline xmlChar* asXmlChar(std::string x) {
   return (xmlChar*) x.c_str();
+}
+
+inline Rcpp::CharacterVector asCharacterVector(std::string x) {
+  return Rcpp::CharacterVector(Rf_mkCharCE(x.c_str(), CE_UTF8));
 }
 
 // ----------------------------------------------------------------------------
@@ -52,46 +57,47 @@ public:
 // A wrapper around a pair of character vectors used to namespaces to prefixes
 
 class NsMap {
-  std::vector<std::string> prefix_, url_;
 
-public:
+  // We only store the index to avoid duplicating the data
+  typedef std::multimap<std::string, std::string> prefix2url_t;
+
+  prefix2url_t prefix2url;
+
+  public:
   NsMap() {
   }
 
   // Initialise from an existing character vector
   NsMap(Rcpp::CharacterVector x) {
-    Rcpp::CharacterVector names =  Rcpp::as<Rcpp::CharacterVector>(x.attr("names"));
-    for (int i = 0; i < x.size(); ++i) {
+    Rcpp::CharacterVector names = Rcpp::as<Rcpp::CharacterVector>(x.attr("names"));
+    for (R_len_t i = 0; i < x.size(); ++i) {
       add(std::string(names[i]), std::string(x[i]));
     }
   }
 
-  bool hasUrl(std::string url) {
-    for (size_t i = 0; i < url_.size(); ++i) {
-      if (url_[i] == url)
-        return true;
-    }
-    return false;
+  bool hasPrefix(const std::string& prefix) {
+    return prefix2url.find(prefix) != prefix2url.end();
   }
 
-  std::string findPrefix(std::string url) {
-    for (size_t i = 0; i < url_.size(); ++i) {
-      if (url_[i] == url)
-        return prefix_[i];
-    }
-
-    Rcpp::stop("Couldn't find prefix for url %s", url);
-    return "";
-  }
-
-  std::string findUrl(std::string prefix) {
-    for (size_t i = 0; i < prefix_.size(); ++i) {
-      if (prefix_[i] == prefix)
-        return url_[i];
+  std::string findUrl(const std::string& prefix) {
+    prefix2url_t::const_iterator it = prefix2url.find(prefix);
+    if (it != prefix2url.end()) {
+      return it->second;
     }
 
     Rcpp::stop("Couldn't find url for prefix %s", prefix);
-    return "";
+    return std::string();
+  }
+
+  std::string findPrefix(const std::string& url) {
+    for (prefix2url_t::const_iterator it = prefix2url.begin(); it != prefix2url.end(); ++it) {
+      if (it->second == url) {
+        return it->first;
+      }
+    }
+
+    Rcpp::stop("Couldn't find prefix for url %s", url);
+    return std::string();
   }
 
   bool add(const xmlChar* prefix, const xmlChar* url) {
@@ -99,20 +105,12 @@ public:
   }
 
   bool add(std::string prefix, std::string url) {
-    if (hasUrl(url))
-      return false;
-
-    prefix_.push_back(prefix);
-    url_.push_back(url);
-
+    prefix2url.insert(prefix2url_t::value_type(prefix, url));
     return true;
   }
 
   Rcpp::CharacterVector out() {
-    Rcpp::CharacterVector out = Rcpp::wrap(url_);
-    out.attr("names") = Rcpp::wrap(prefix_);
-    return out;
+    return Rcpp::wrap(prefix2url);
   }
 };
-
 #endif

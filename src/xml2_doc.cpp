@@ -9,19 +9,20 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 XPtrDoc doc_parse_file(std::string path,
                             std::string encoding = "",
-                            bool as_html = false) {
+                            bool as_html = false,
+                            int options = 0) {
   xmlDoc* pDoc;
   if (as_html) {
     pDoc = htmlReadFile(
       path.c_str(),
       encoding == "" ? NULL : encoding.c_str(),
-      HTML_PARSE_RECOVER | HTML_PARSE_NOERROR
+      options
     );
   } else {
     pDoc = xmlReadFile(
       path.c_str(),
       encoding == "" ? NULL : encoding.c_str(),
-      0
+      options
     );
   }
 
@@ -34,7 +35,8 @@ XPtrDoc doc_parse_file(std::string path,
 // [[Rcpp::export]]
 XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
                       std::string base_url = "",
-                      bool as_html = false) {
+                      bool as_html = false,
+                      int options = 0) {
   xmlDoc* pDoc;
   if (as_html) {
     pDoc = htmlReadMemory(
@@ -42,7 +44,7 @@ XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
       Rf_length(x),
       base_url == "" ? NULL : base_url.c_str(),
       encoding == "" ? NULL : encoding.c_str(),
-      HTML_PARSE_RECOVER | HTML_PARSE_NOERROR
+      options
     );
   } else {
     pDoc = xmlReadMemory(
@@ -50,7 +52,7 @@ XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
       Rf_length(x),
       base_url == "" ? NULL : base_url.c_str(),
       encoding == "" ? NULL : encoding.c_str(),
-      0
+      options
     );
   }
 
@@ -61,18 +63,18 @@ XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
 }
 
 // [[Rcpp::export]]
-std::string doc_format(XPtrDoc x) {
+CharacterVector doc_format(XPtrDoc x) {
   xmlChar *s;
   xmlDocDumpMemory(x.get(), &s, NULL);
 
-  return Xml2String(s).asStdString();
+  return Xml2String(s).asRString();
 }
 
 // [[Rcpp::export]]
-void doc_write(XPtrDoc x, std::string path) {
-  FILE* f = fopen(path.c_str(), "wb");
+void doc_write(XPtrDoc x, std::string path, bool format) {
+  FILE* f = fopen(R_ExpandFileName(path.c_str()), "wb");
 
-  int res = xmlDocDump(f, x.get());
+  int res = xmlDocFormatDump(f, x.get(), format ? 1 : 0);
   fclose(f);
 
   if (res == -1) {
@@ -86,7 +88,22 @@ XPtrNode doc_root(XPtrDoc x) {
 }
 
 // [[Rcpp::export]]
+bool doc_has_root(XPtrDoc x) {
+  return xmlDocGetRootElement(x.get()) != NULL;
+}
+
+// [[Rcpp::export]]
 CharacterVector doc_url(XPtrDoc x) {
   SEXP string = (x->URL == NULL) ? NA_STRING : Rf_mkCharCE((const char*) x->URL, CE_UTF8);
   return CharacterVector(string);
+}
+
+// [[Rcpp::export]]
+XPtrDoc doc_new(std::string version) {
+  return XPtrDoc(xmlNewDoc(asXmlChar(version)));
+}
+
+// [[Rcpp::export]]
+XPtrNode doc_set_root(XPtrDoc doc, XPtrNode root) {
+  return XPtrNode(xmlDocSetRootElement(doc, root));
 }

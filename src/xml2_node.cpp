@@ -2,6 +2,8 @@
 #include <libxml/tree.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <fstream>
+#include <sstream>
 
 using namespace Rcpp;
 #include "xml2_types.h"
@@ -22,18 +24,48 @@ std::string nodeName(T* node, CharacterVector nsMap) {
 }
 
 // [[Rcpp::export]]
-std::string node_name(XPtrNode node, CharacterVector nsMap) {
-  return nodeName(node.get(), nsMap);
+CharacterVector node_name(XPtrNode node, CharacterVector nsMap) {
+  return asCharacterVector(nodeName(node.get(), nsMap));
 }
 
 // [[Rcpp::export]]
-std::string node_text(XPtrNode node, bool trim) {
+void node_set_name(XPtrNode node, std::string value) {
+  return xmlNodeSetName(node, asXmlChar(value));
+}
+
+// [[Rcpp::export]]
+CharacterVector node_text(XPtrNode node, bool trim) {
   std::string text = Xml2String(xmlNodeGetContent(node.get())).asStdString();
 
   if (trim)
     boost::algorithm::trim(text);
 
-  return text;
+  return asCharacterVector(text.c_str());
+}
+
+bool hasPrefix(std::string lhs, std::string rhs) {
+  if (lhs.length() > rhs.length()) {
+    return false;
+  }
+
+  return std::equal(
+      lhs.begin(),
+      lhs.end(),
+      rhs.begin());
+}
+
+const xmlChar* xmlNsDefinition(xmlNodePtr node, xmlChar* lookup) {
+  xmlNsPtr next = node->nsDef;
+
+  while(next != NULL) {
+    // default namespace
+    if (xmlStrEqual(next->prefix, lookup)) {
+      return next->href;
+    }
+    next = next->next;
+  }
+
+  return NULL;
 }
 
 // [[Rcpp::export]]
@@ -43,6 +75,13 @@ SEXP node_attr(XPtrNode node, std::string name, CharacterVector missing,
     Rcpp::stop("`missing` should be length 1");
   SEXP missingVal = missing[0];
 
+  if (name == "xmlns") {
+    return CharacterVector(Xml2String(xmlNsDefinition(node, NULL)).asRString(missingVal));
+  }
+  if (hasPrefix("xmlns:", name)) {
+    std::string prefix = name.substr(6);
+    return CharacterVector(Xml2String(xmlNsDefinition(node, asXmlChar(prefix))).asRString(missingVal));
+  }
   xmlChar* string;
   if (nsMap.size() == 0) {
     string = xmlGetProp(node.get(), asXmlChar(name));
@@ -55,8 +94,8 @@ SEXP node_attr(XPtrNode node, std::string name, CharacterVector missing,
     } else {
       // Split name into prefix & attr, then look up full url
       std::string
-      prefix = name.substr(0, colon),
-        attr = name.substr(colon + 1, name.size() - 1);
+        prefix = name.substr(0, colon),
+               attr = name.substr(colon + 1, name.size() - 1);
 
       std::string url = NsMap(nsMap).findUrl(prefix);
 
@@ -68,44 +107,241 @@ SEXP node_attr(XPtrNode node, std::string name, CharacterVector missing,
 }
 
 // [[Rcpp::export]]
-CharacterVector node_attrs(XPtrNode node, CharacterVector nsMap) {
+CharacterVector node_attrs(XPtrNode node_, CharacterVector nsMap) {
 
   int n = 0;
-  for(xmlAttr* cur = node->properties; cur != NULL; cur = cur->next)
-    n++;
+  xmlNodePtr node = node_.get();
 
-  CharacterVector names(n), values(n);
+  if (node->type == XML_ELEMENT_NODE) {
+    // attributes
+    for(xmlAttr* cur = node->properties; cur != NULL; cur = cur->next)
+      n++;
 
-  int i = 0;
-  for(xmlAttr* cur = node->properties; cur != NULL; cur = cur->next) {
-    names[i] = nodeName(cur, nsMap);
+    // namespace definitions
+    for(xmlNsPtr cur = node->nsDef; cur != NULL; cur = cur->next)
+      n++;
 
-    xmlNs* ns = cur->ns;
-    if (ns == NULL) {
-      if (nsMap.size() > 0) {
-        values[i] = Xml2String(xmlGetNoNsProp(node.get(), cur->name)).asRString();
+    CharacterVector names(n), values(n);
+
+    int i = 0;
+    for(xmlAttr* cur = node->properties; cur != NULL; cur = cur->next, ++i) {
+      names[i] = nodeName(cur, nsMap);
+
+      xmlNs* ns = cur->ns;
+      if (ns == NULL) {
+        if (nsMap.size() > 0) {
+          values[i] = Xml2String(xmlGetNoNsProp(node, cur->name)).asRString();
+        } else {
+          values[i] = Xml2String(xmlGetProp(node, cur->name)).asRString();
+        }
       } else {
-        values[i] = Xml2String(xmlGetProp(node.get(), cur->name)).asRString();
+        values[i] = Xml2String(xmlGetNsProp(node, cur->name, ns->href)).asRString();
       }
-    } else {
-      values[i] = Xml2String(xmlGetNsProp(node.get(), cur->name, ns->href)).asRString();
     }
 
-    ++i;
+    for(xmlNsPtr cur = node->nsDef; cur != NULL; cur = cur->next, ++i) {
+      if (cur->prefix == NULL) {
+        names[i] = "xmlns";
+      } else {
+        names[i] = "xmlns:" + Xml2String(cur->prefix).asStdString();
+      }
+      values[i] = Xml2String(cur->href).asRString();
+    }
+
+    values.attr("names") = wrap<CharacterVector>(names);
+    return values;
   }
 
-  values.attr("names") = wrap<CharacterVector>(names);
-  return values;
+  return CharacterVector();
+}
+
+
+// Fix the tree by removing the namespace pointers to the given tree
+void xmlRemoveNamespace(xmlNodePtr tree, xmlNsPtr ns) {
+
+  // From https://github.com/GNOME/libxml2/blob/v2.9.2/tree.c#L6440
+  //
+  xmlNodePtr node = tree;
+  /*
+   * Browse the full subtree, deep first
+   */
+  while(node != NULL) {
+    if (node->ns != NULL && node->ns == ns) {
+      node->ns = NULL;
+    }
+
+    // Check for namespaces on the attributes
+    if (ns->prefix != NULL && // default namespaces will not exist on attributes
+        node->type == XML_ELEMENT_NODE) {
+      xmlAttrPtr attr = node->properties;
+      while (attr != NULL) {
+        if (attr->ns != NULL && attr->ns == ns) {
+          attr->ns = NULL;
+        }
+        attr = attr->next;
+      }
+    }
+
+    if ((node->children != NULL) && (node->type != XML_ENTITY_REF_NODE)) {
+      /* deep first */
+      node = node->children;
+    } else if ((node != tree) && (node->next != NULL)) {
+      /* then siblings */
+      node = node->next;
+    } else if (node != tree) {
+      /* go up to parents->next if needed */
+      while (node != tree) {
+        if (node->parent != NULL)
+          node = node->parent;
+        if ((node != tree) && (node->next != NULL)) {
+          node = node->next;
+          break;
+        }
+        if (node->parent == NULL) {
+          node = NULL;
+          break;
+        }
+      }
+      /* exit condition */
+      if (node == tree)
+        node = NULL;
+    } else
+      break;
+  }
+  return;
+}
+
+// Fix the tree by adding the namespace pointers to the given tree
+void xmlAddNamespace(xmlNodePtr tree, xmlNsPtr ns) {
+
+  // Only needed for default namespaces
+  if (ns->prefix != NULL) {
+    return;
+  }
+
+  // From https://github.com/GNOME/libxml2/blob/v2.9.2/tree.c#L6440
+  //
+  xmlNodePtr node = tree;
+  /*
+   * Browse the full subtree, deep first
+   */
+  while(node != NULL) {
+    if (node->ns == NULL) {
+      node->ns = ns;
+    }
+
+    if ((node->children != NULL) && (node->type != XML_ENTITY_REF_NODE)) {
+      /* deep first */
+      node = node->children;
+    } else if ((node != tree) && (node->next != NULL)) {
+      /* then siblings */
+      node = node->next;
+    } else if (node != tree) {
+      /* go up to parents->next if needed */
+      while (node != tree) {
+        if (node->parent != NULL)
+          node = node->parent;
+        if ((node != tree) && (node->next != NULL)) {
+          node = node->next;
+          break;
+        }
+        if (node->parent == NULL) {
+          node = NULL;
+          break;
+        }
+      }
+      /* exit condition */
+      if (node == tree)
+        node = NULL;
+    } else
+      break;
+  }
+  return;
+}
+
+void removeNs(xmlNodePtr node, xmlChar* prefix) {
+  if (node == NULL) {
+    return;
+  }
+
+  if (node->nsDef == NULL) {
+    return;
+  }
+
+  xmlNsPtr prev = node->nsDef;
+  if (xmlStrEqual(prev->prefix, prefix)) {
+    node->nsDef = prev->next;
+    xmlRemoveNamespace(node, prev);
+    xmlFreeNs(prev);
+    return;
+  }
+
+  while(prev->next != NULL) {
+    xmlNsPtr cur = prev->next;
+    if (xmlStrEqual(cur->prefix, prefix)) {
+      prev->next = cur->next;
+      xmlRemoveNamespace(node, cur);
+      xmlFreeNs(cur);
+      return;
+    }
+    prev = prev->next;
+  }
+  return;
 }
 
 // [[Rcpp::export]]
-std::string node_format(XPtrDoc doc, XPtrNode node,
+void node_set_attr(XPtrNode node, std::string name, std::string value, CharacterVector nsMap) {
+
+  bool remove = value.length() == 0;
+
+  if (name == "xmlns") {
+    if (remove) removeNs(node.get(), NULL);
+    else xmlAddNamespace(node.get(), xmlNewNs(node.get(), asXmlChar(value), NULL));
+    return;
+  }
+  if (hasPrefix("xmlns:", name)) {
+    std::string prefix = name.substr(6);
+    if (remove) removeNs(node.get(), asXmlChar(prefix));
+    else xmlAddNamespace(node.get(), xmlNewNs(node.get(), asXmlChar(value), asXmlChar(prefix)));
+    return;
+  }
+
+  if (nsMap.size() == 0) {
+      if (remove) xmlUnsetProp(node.get(), asXmlChar(name));
+      else xmlSetProp(node.get(), asXmlChar(name), asXmlChar(value));
+  } else {
+    size_t colon = name.find(":");
+    if (colon == std::string::npos) {
+      // Has namespace spec, but attribute not qualified, so just use that name
+      if (remove) xmlUnsetNsProp(node.get(), NULL, asXmlChar(name));
+      else xmlSetProp(node.get(), asXmlChar(name), asXmlChar(value));
+    } else {
+      // Split name into prefix & attr, then look up full url
+      std::string
+      prefix = name.substr(0, colon),
+        attr = name.substr(colon + 1, name.size() - 1);
+
+      xmlNodePtr node_ = node.get();
+      std::string url = NsMap(nsMap).findUrl(prefix);
+
+      xmlNsPtr ns = xmlSearchNsByHref(node_->doc, node_, asXmlChar(url));
+
+      if (remove) xmlUnsetNsProp(node_, ns, asXmlChar(attr));
+      else xmlSetNsProp(node_, ns, asXmlChar(attr), asXmlChar(value));
+    }
+  }
+
+  return;
+}
+
+// [[Rcpp::export]]
+CharacterVector node_format(XPtrDoc doc, XPtrNode node,
                         bool format = true,
                         int indent = 0) {
   boost::shared_ptr<xmlBuffer> buffer(xmlBufferCreate(), xmlFree);
   xmlNodeDump(buffer.get(), doc.get(), node.get(), indent, format);
 
-  return Xml2String(buffer->content).asStdString();
+  return Xml2String(buffer->content).asRString();
 }
 
 List asList(std::vector<xmlNode*> nodes) {
@@ -196,15 +432,25 @@ std::string node_path(XPtrNode n) {
 }
 
 // [[Rcpp::export]]
-LogicalVector nodes_duplicated(ListOf<XPtrNode> nodes) {
+LogicalVector nodes_duplicated(List nodes) {
+
   std::set<xmlNode*> seen;
 
   int n = nodes.size();
   LogicalVector out(n);
 
   for (int i = 0; i < n; ++i) {
-    XPtrNode node = nodes[i];
-    out[i] = !seen.insert(node.get()).second;
+    bool result;
+    if (RObject(nodes[i]).inherits("xml_node")) {
+      XPtrNode node = as<XPtrNode>(List(nodes[i])["node"]);
+      result = !seen.insert(node.get()).second;
+    } else if (RObject(nodes[i]).inherits("xml_missing")){
+      result = false;
+    } else {
+      XPtrNode node = nodes[i];
+      result = !seen.insert(node.get()).second;
+    }
+    out[i] = result;
   }
 
   return out;
@@ -213,4 +459,104 @@ LogicalVector nodes_duplicated(ListOf<XPtrNode> nodes) {
 // [[Rcpp::export]]
 int node_type(XPtrNode node) {
   return node->type;
+}
+
+// [[Rcpp::export]]
+void node_set_content(XPtrNode node, std::string content) {
+  return xmlNodeSetContentLen(node.get(), asXmlChar(content), content.size());
+}
+
+// [[Rcpp::export]]
+void node_append_content(XPtrNode node, std::string content) {
+  return xmlNodeAddContentLen(node.get(), asXmlChar(content), content.size());
+}
+
+// [[Rcpp::export]]
+XPtrNode node_add_child(XPtrNode parent, XPtrNode cur, bool copy) {
+  xmlNodePtr node = NULL;
+  if (copy) {
+    node = xmlCopyNode(cur.get(), 1);
+  } else {
+    node = cur.get();
+  }
+  return XPtrNode(xmlAddChild(parent.get(), node));
+}
+
+// Previous sibling
+// [[Rcpp::export]]
+XPtrNode node_prepend_sibling(XPtrNode cur, XPtrNode elem, bool copy) {
+  xmlNodePtr node = NULL;
+  if (copy) {
+    node = xmlCopyNode(elem.get(), 1);
+  } else {
+    node = elem.get();
+  }
+  return XPtrNode(xmlAddPrevSibling(cur.get(), node));
+}
+
+// Append sibling
+// [[Rcpp::export]]
+XPtrNode node_append_sibling(XPtrNode cur, XPtrNode elem, bool copy) {
+  xmlNodePtr node = NULL;
+  if (copy) {
+    node = xmlCopyNode(elem.get(), 1);
+  } else {
+    node = elem.get();
+  }
+  return XPtrNode(xmlAddNextSibling(cur.get(), node));
+}
+
+// Replace node
+// [[Rcpp::export]]
+XPtrNode node_replace(XPtrNode old, XPtrNode cur, bool copy) {
+  xmlNodePtr node = NULL;
+  if (copy) {
+    node = xmlCopyNode(cur.get(), 1);
+  } else {
+    node = cur.get();
+  }
+  return XPtrNode(xmlReplaceNode(old.get(), node));
+}
+
+// [[Rcpp::export]]
+void node_remove(XPtrNode cur, bool free) {
+  xmlUnlinkNode(cur.get());
+  if (free) {
+    xmlFreeNode(cur.get());
+  }
+  return;
+}
+
+// [[Rcpp::export]]
+XPtrNode node_new(std::string name) {
+  return XPtrNode(xmlNewNode(NULL, asXmlChar(name)));
+}
+
+// [[Rcpp::export]]
+XPtrNode node_new_ns(std::string name, XPtrNs ns) {
+  return XPtrNode(xmlNewNode(ns.get(), asXmlChar(name)));
+}
+
+// [[Rcpp::export]]
+XPtrNode node_null() {
+  return XPtrNode(xmlNodePtr(NULL));
+}
+
+// [[Rcpp::export]]
+void node_set_namespace_uri(XPtrDoc doc, XPtrNode node, std::string uri) {
+  xmlNsPtr ns = xmlSearchNsByHref(doc.get(), node.get(), asXmlChar(uri));
+
+  xmlSetNs(node.get(), ns);
+}
+
+// [[Rcpp::export]]
+void node_set_namespace_prefix(XPtrDoc doc, XPtrNode node, std::string prefix) {
+  xmlNsPtr ns = NULL;
+  if (prefix.length() == 0) {
+    ns = xmlSearchNs(doc.get(), node.get(), NULL);
+  } else {
+    ns = xmlSearchNs(doc.get(), node.get(), asXmlChar(prefix));
+  }
+
+  xmlSetNs(node.get(), ns);
 }

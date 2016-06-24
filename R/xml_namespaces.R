@@ -37,8 +37,18 @@
 #' str(as_list(x))
 #' str(as_list(x, ns))
 xml_ns <- function(x) {
+  UseMethod("xml_ns")
+}
+
+#' @export
+xml_ns.xml_document <- function(x) {
+  if (length(x) == 0) {
+    return(character())
+  }
+
   stopifnot(inherits(x, "xml_document"))
-  x <- doc_namespaces(x$doc)
+  doc <- x$doc
+  x <- doc_namespaces(doc)
 
   # Number default namespaces
   is_default <- names(x) == ""
@@ -48,8 +58,17 @@ xml_ns <- function(x) {
   names(x) <- make.unique(names(x), "")
 
   class(x) <- "xml_namespace"
+
   x
 }
+
+#' @export
+xml_ns.xml_node <- function(x) {
+  xml_ns(xml_root(x))
+}
+
+#' @export
+xml_ns.xml_nodeset <- xml_ns.xml_node
 
 #' @export
 print.xml_namespace <- function(x, ...) {

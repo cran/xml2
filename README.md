@@ -1,17 +1,21 @@
 # xml2
+[![Build Status](https://travis-ci.org/hadley/xml2.svg?branch=master)](https://travis-ci.org/hadley/xml2)
+[![Coverage Status](https://img.shields.io/codecov/c/github/hadley/xml2/master.svg)](https://codecov.io/github/hadley/xml2?branch=master)
 
 The xml2 package is a binding to [libxml2](http://xmlsoft.org), making it easy to work with HTML and XML from R. The API is somewhat inspired by [jQuery](http://jquery.com).
 
 ## Installation
 
 You can install xml2 from CRAN, 
+
 ```R
 install.packages("xml2")
 ```
+
 or you can install the development version from github, using `devtools`:
+
 ```R
 # install.packages("devtools")
-devtools::install_github("RcppCore/Rcpp")
 devtools::install_github("hadley/xml2")
 ```
 
@@ -51,11 +55,8 @@ xml2 has similar goals to the XML package. The main differences are:
   free the memory used by an XML document as soon as the last reference
   to it goes away.
 
-* xml2 only exposes a fraction of the functions that XML does. Currently,
-  the biggest difference is that xml2 provides no way to modify an existing
-  xml document or create a new one.
-
 * xml2 has a very simple class hierarchy so don't need to think about exactly 
   what type of object you have, xml2 will just do the right thing.
 
-* More convenient handling of namespaces - see `xml_ns()` to get started.
+* More convenient handling of namespaces in Xpath expressions - see `xml_ns()` 
+  and `xml_ns_strip()` to get started.

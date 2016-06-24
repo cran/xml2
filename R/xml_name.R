@@ -21,6 +21,11 @@ xml_name <- function(x, ns = character()) {
 }
 
 #' @export
+xml_name.xml_missing <- function(x, ns = character()) {
+  NA_character_
+}
+
+#' @export
 xml_name.xml_nodeset <- function(x, ns = character()) {
   vapply(x, xml_name, ns = ns, FUN.VALUE = character(1))
 }
@@ -28,4 +33,29 @@ xml_name.xml_nodeset <- function(x, ns = character()) {
 #' @export
 xml_name.xml_node <- function(x, ns = character()) {
   node_name(x$node, nsMap = ns)
+}
+
+#' Modify the (tag) name of an element
+#'
+#' @inheritParams xml_name
+#' @param ns ignored for assignment
+#' @param value a character vector with replacement name.
+#' @export
+`xml_name<-` <- function(x, ns = character(), value) {
+   UseMethod("xml_name<-")
+}
+
+#' @export
+`xml_name<-.xml_node` <- function(x, ns = character(), value) {
+  node_set_name(x$node, value)
+  x
+}
+
+#' @export
+`xml_name<-.xml_nodeset` <- function(x, ns = character(), value) {
+  if (!is.list(ns)) {
+     ns <- list(ns)
+  }
+  Map(`xml_name<-`, x, ns, value)
+  x
 }
