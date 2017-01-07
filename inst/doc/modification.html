@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jim Hester" />
 
-<meta name="date" content="2016-05-20" />
+<meta name="date" content="2017-01-06" />
 
 <title>Node Modification</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Node Modification</h1>
 <h4 class="author"><em>Jim Hester</em></h4>
-<h4 class="date"><em>2016-05-20</em></h4>
+<h4 class="date"><em>2017-01-06</em></h4>
 
 
 
@@ -80,69 +80,82 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="text-modification" class="section level2">
 <h2>Text Modification</h2>
 <p>Text modification only happens on text nodes. If a given node has more than one text node only the first will be affected. If you want to modify additional text nodes you need to select them explicitly with <code>/text()</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(xml2)
-x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;p&gt;This is some &lt;b&gt;text&lt;/b&gt;. This is more.&lt;/p&gt;&quot;</span>)
-<span class="kw">xml_text</span>(x)</code></pre></div>
-<pre><code>## [1] &quot;This is some text. This is more.&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_text</span>(x) &lt;-<span class="st"> &quot;This is some other text.&quot;</span></code></pre></div>
-<pre><code>## Warning in xpath_search(x$node, x$doc, xpath = xpath, nsMap = ns,
-## num_results = 1): 2 results found, but only returning first 1</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_text</span>(x)</code></pre></div>
-<pre><code>## [1] &quot;This is some other text.text. This is more.&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># You can avoid this by explicitly selecting the text node.</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;p&gt;This is some &lt;b&gt;text&lt;/b&gt;. This is more.&lt;/p&gt;&quot;</span>)
+<span class="kw">xml_text</span>(x)
+<span class="co">#&gt; [1] &quot;This is some text. This is more.&quot;</span>
+
+<span class="kw">xml_text</span>(x) &lt;-<span class="st"> &quot;This is some other text.&quot;</span>
+<span class="kw">xml_text</span>(x)
+<span class="co">#&gt; [1] &quot;This is some other text.text. This is more.&quot;</span>
+
+<span class="co"># You can avoid this by explicitly selecting the text node.</span>
 x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;p&gt;This is some text. This is &lt;b&gt;bold!&lt;/b&gt;&lt;/p&gt;&quot;</span>)
 text_only &lt;-<span class="st"> </span><span class="kw">xml_find_all</span>(x, <span class="st">&quot;//text()&quot;</span>)
 
 <span class="kw">xml_text</span>(text_only) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;This is some other text. &quot;</span>, <span class="st">&quot;Still bold!&quot;</span>)
-<span class="kw">xml_text</span>(x)</code></pre></div>
-<pre><code>## [1] &quot;This is some other text. Still bold!&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_structure</span>(x)</code></pre></div>
-<pre><code>## &lt;p&gt;
-##   {text}
-##   &lt;b&gt;
-##     {text}</code></pre>
+<span class="kw">xml_text</span>(x)
+<span class="co">#&gt; [1] &quot;This is some other text. Still bold!&quot;</span>
+<span class="kw">xml_structure</span>(x)
+<span class="co">#&gt; &lt;p&gt;</span>
+<span class="co">#&gt;   {text}</span>
+<span class="co">#&gt;   &lt;b&gt;</span>
+<span class="co">#&gt;     {text}</span></code></pre></div>
 </div>
-<div id="attribute-modification" class="section level2">
-<h2>Attribute Modification</h2>
-<p>Attributes are modified one at a time with <code>xml_attr()</code> or all at once with <code>xml_attrs()</code>. In both cases using <code>NULL</code> as the value will remove the attribute completely.</p>
+<div id="attribute-and-namespace-definition-modification" class="section level2">
+<h2>Attribute and Namespace Definition Modification</h2>
+<p>Attributes and namespace definitions are modified one at a time with <code>xml_attr()</code> or all at once with <code>xml_attrs()</code>. In both cases using <code>NULL</code> as the value will remove the attribute completely.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;a href='invalid!'&gt;xml2&lt;/a&gt;&quot;</span>)
-<span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;invalid!&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>) &lt;-<span class="st"> &quot;https://github.com/hadley/xml2&quot;</span>
-<span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>)</code></pre></div>
-<pre><code>## [1] &quot;https://github.com/hadley/xml2&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_attrs</span>(x) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dt">id =</span> <span class="st">&quot;xml2&quot;</span>, <span class="dt">href =</span> <span class="st">&quot;https://github.com/hadley/xml2&quot;</span>)
-<span class="kw">xml_attrs</span>(x)</code></pre></div>
-<pre><code>##                             href                               id 
-## &quot;https://github.com/hadley/xml2&quot;                           &quot;xml2&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cat</span>(<span class="kw">as.character</span>(x))</code></pre></div>
-<pre><code>## &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
-## &lt;a href=&quot;https://github.com/hadley/xml2&quot; id=&quot;xml2&quot;&gt;xml2&lt;/a&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_attrs</span>(x) &lt;-<span class="st"> </span><span class="ot">NULL</span>
-<span class="kw">cat</span>(<span class="kw">as.character</span>(x))</code></pre></div>
-<pre><code>## &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
-## &lt;a&gt;xml2&lt;/a&gt;</code></pre>
+<span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>)
+<span class="co">#&gt; [1] &quot;invalid!&quot;</span>
+
+<span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>) &lt;-<span class="st"> &quot;https://github.com/hadley/xml2&quot;</span>
+<span class="kw">xml_attr</span>(x, <span class="st">&quot;href&quot;</span>)
+<span class="co">#&gt; [1] &quot;https://github.com/hadley/xml2&quot;</span>
+
+<span class="kw">xml_attrs</span>(x) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dt">id =</span> <span class="st">&quot;xml2&quot;</span>, <span class="dt">href =</span> <span class="st">&quot;https://github.com/hadley/xml2&quot;</span>)
+<span class="kw">xml_attrs</span>(x)
+<span class="co">#&gt;                             href                               id </span>
+<span class="co">#&gt; &quot;https://github.com/hadley/xml2&quot;                           &quot;xml2&quot;</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;a href=&quot;https://github.com/hadley/xml2&quot; id=&quot;xml2&quot;&gt;</span>
+
+<span class="kw">xml_attrs</span>(x) &lt;-<span class="st"> </span><span class="ot">NULL</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;a&gt;</span>
+
+<span class="co"># Namespaces are added with as a xmlns or xmlns:prefix attribute</span>
+<span class="kw">xml_attr</span>(x, <span class="st">&quot;xmlns&quot;</span>) &lt;-<span class="st"> &quot;http://foo&quot;</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;a xmlns=&quot;http://foo&quot;&gt;</span>
+
+<span class="kw">xml_attr</span>(x, <span class="st">&quot;xmlns:bar&quot;</span>) &lt;-<span class="st"> &quot;http://bar&quot;</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;a xmlns=&quot;http://foo&quot; xmlns:bar=&quot;http://bar&quot;&gt;</span></code></pre></div>
 </div>
 <div id="name-modification" class="section level2">
 <h2>Name Modification</h2>
 <p>Node names are modified with <code>xml_name()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;a&gt;&lt;b/&gt;&lt;/a&gt;&quot;</span>)
-x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;a&gt;
-## [1] &lt;b/&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_name</span>(x)</code></pre></div>
-<pre><code>## [1] &quot;a&quot;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_name</span>(x) &lt;-<span class="st"> &quot;c&quot;</span>
-x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;c&gt;
-## [1] &lt;b/&gt;</code></pre>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;a&gt;</span>
+<span class="co">#&gt; [1] &lt;b/&gt;</span>
+<span class="kw">xml_name</span>(x)
+<span class="co">#&gt; [1] &quot;a&quot;</span>
+<span class="kw">xml_name</span>(x) &lt;-<span class="st"> &quot;c&quot;</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;c&gt;</span>
+<span class="co">#&gt; [1] &lt;b/&gt;</span></code></pre></div>
 </div>
 </div>
 <div id="node-modification" class="section level1">
 <h1>Node modification</h1>
-<p>All of these functions have a <code>copy</code> argument. If this is set to <code>FALSE</code> they will remove the new node from its location before inserting it into the new location. Otherwise they make a copy of the node before insertion.</p>
+<p>All of these functions have a <code>.copy</code> argument. If this is set to <code>FALSE</code> they will remove the new node from its location before inserting it into the new location. Otherwise they make a copy of the node before insertion.</p>
 <div id="replacing-existing-nodes" class="section level2">
 <h2>Replacing existing nodes</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;parent&gt;&lt;child&gt;1&lt;/child&gt;&lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;&lt;/parent&gt;&quot;</span>)
@@ -151,41 +164,38 @@ t1 &lt;-<span class="st"> </span>children[[<span class="dv">1</span>]]
 t2 &lt;-<span class="st"> </span>children[[<span class="dv">2</span>]]
 t3 &lt;-<span class="st"> </span><span class="kw">xml_children</span>(children[[<span class="dv">2</span>]])[[<span class="dv">1</span>]]
 
-<span class="kw">xml_replace</span>(t1, t3)</code></pre></div>
-<pre><code>## {xml_node}
-## &lt;child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;parent&gt;
-## [1] &lt;child&gt;3&lt;/child&gt;
-## [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</code></pre>
+<span class="kw">xml_replace</span>(t1, t3)
+<span class="co">#&gt; {xml_node}</span>
+<span class="co">#&gt; &lt;child&gt;</span>
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;parent&gt;</span>
+<span class="co">#&gt; [1] &lt;child&gt;3&lt;/child&gt;</span>
+<span class="co">#&gt; [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</span></code></pre></div>
 </div>
-<div id="append-sibling" class="section level2">
-<h2>Append sibling</h2>
+<div id="add-a-sibling" class="section level2">
+<h2>Add a sibling</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;parent&gt;&lt;child&gt;1&lt;/child&gt;&lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;&lt;/parent&gt;&quot;</span>)
 children &lt;-<span class="st"> </span><span class="kw">xml_children</span>(x)
 t1 &lt;-<span class="st"> </span>children[[<span class="dv">1</span>]]
 t2 &lt;-<span class="st"> </span>children[[<span class="dv">2</span>]]
 t3 &lt;-<span class="st"> </span><span class="kw">xml_children</span>(children[[<span class="dv">2</span>]])[[<span class="dv">1</span>]]
 
-<span class="kw">xml_add_sibling</span>(t1, t3)</code></pre></div>
-<pre><code>## {xml_node}
-## &lt;child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;parent&gt;
-## [1] &lt;child&gt;1&lt;/child&gt;
-## [2] &lt;child&gt;3&lt;/child&gt;
-## [3] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_add_sibling</span>(t3, t1, <span class="dt">where =</span> <span class="st">&quot;before&quot;</span>)</code></pre></div>
-<pre><code>## {xml_node}
-## &lt;child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;parent&gt;
-## [1] &lt;child&gt;1&lt;/child&gt;
-## [2] &lt;child&gt;3&lt;/child&gt;
-## [3] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;child&gt;1&lt;/child&gt;&lt;/child&gt;</code></pre>
+<span class="kw">xml_add_sibling</span>(t1, t3)
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;parent&gt;</span>
+<span class="co">#&gt; [1] &lt;child&gt;1&lt;/child&gt;</span>
+<span class="co">#&gt; [2] &lt;child&gt;3&lt;/child&gt;</span>
+<span class="co">#&gt; [3] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</span>
+
+<span class="kw">xml_add_sibling</span>(t3, t1, <span class="dt">where =</span> <span class="st">&quot;before&quot;</span>)
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;parent&gt;</span>
+<span class="co">#&gt; [1] &lt;child&gt;1&lt;/child&gt;</span>
+<span class="co">#&gt; [2] &lt;child&gt;3&lt;/child&gt;</span>
+<span class="co">#&gt; [3] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;child&gt;1&lt;/child&gt;&lt;/child&gt;</span></code></pre></div>
 </div>
 <div id="add-a-child" class="section level2">
 <h2>Add a child</h2>
@@ -195,22 +205,40 @@ t1 &lt;-<span class="st"> </span>children[[<span class="dv">1</span>]]
 t2 &lt;-<span class="st"> </span>children[[<span class="dv">2</span>]]
 t3 &lt;-<span class="st"> </span><span class="kw">xml_children</span>(children[[<span class="dv">2</span>]])[[<span class="dv">1</span>]]
 
-<span class="kw">xml_add_child</span>(t1, t3)</code></pre></div>
-<pre><code>## {xml_node}
-## &lt;child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;parent&gt;
-## [1] &lt;child&gt;1&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;
-## [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">xml_add_child</span>(t1, <span class="kw">read_xml</span>(<span class="st">&quot;&lt;test/&gt;&quot;</span>))</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;test&gt;</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x</code></pre></div>
-<pre><code>## {xml_document}
-## &lt;parent&gt;
-## [1] &lt;child&gt;1&lt;child&gt;3&lt;/child&gt;&lt;test/&gt;&lt;/child&gt;
-## [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</code></pre>
+<span class="kw">xml_add_child</span>(t1, t3)
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;parent&gt;</span>
+<span class="co">#&gt; [1] &lt;child&gt;1&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</span>
+<span class="co">#&gt; [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</span>
+
+<span class="kw">xml_add_child</span>(t1, <span class="kw">read_xml</span>(<span class="st">&quot;&lt;test/&gt;&quot;</span>))
+x
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;parent&gt;</span>
+<span class="co">#&gt; [1] &lt;child&gt;1&lt;child&gt;3&lt;/child&gt;&lt;test/&gt;&lt;/child&gt;</span>
+<span class="co">#&gt; [2] &lt;child&gt;2&lt;child&gt;3&lt;/child&gt;&lt;/child&gt;</span></code></pre></div>
+</div>
+<div id="removing-nodes" class="section level2">
+<h2>Removing nodes</h2>
+<p>The <code>xml_remove()</code> can be used to remove a node (and it’s children) from a tree. The default behavior is to unlink the node from the tree, but does <em>not</em> free the memory for the node, so R objects pointing to the node are still valid.</p>
+<p>This allows code like the following to work without crashing R</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;foo&gt;&lt;bar&gt;&lt;baz/&gt;&lt;bar&gt;&lt;/foo&gt;&quot;</span>)
+x1 &lt;-<span class="st"> </span>x %&gt;%<span class="st"> </span><span class="kw">xml_children</span>() %&gt;%<span class="st"> </span>.[[<span class="dv">1</span>]]
+x2 &lt;-<span class="st"> </span>x1 %&gt;%<span class="st"> </span><span class="kw">xml_children</span>() %&gt;%<span class="st"> </span>.[[<span class="dv">1</span>]]
+
+<span class="kw">xml_remove</span>(x1)
+<span class="kw">rm</span>(x1)
+<span class="kw">gc</span>()
+
+x2</code></pre></div>
+<p>If you are not planning on referencing these nodes again this memory is wasted. Calling <code>xml_remove(free = TRUE)</code> will remove the nodes <em>and</em> free the memory used to store them. <strong>Note</strong> In this case <em>any</em> node which previously pointed to the node or it’s children will instead be pointing to free memory and may cause R to crash. xml2 can’t figure this out for you, so it’s your responsibility to remove any objects which are no longer valid.</p>
+<p>In particular <code>xml_find_*()</code> results are easy to overlook, for example</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">x &lt;-<span class="st"> </span><span class="kw">read_xml</span>(<span class="st">&quot;&lt;a&gt;&lt;b /&gt;&lt;b&gt;&lt;b /&gt;&lt;/b&gt;&lt;/a&gt;&quot;</span>)
+bees &lt;-<span class="st"> </span><span class="kw">xml_find_all</span>(x, <span class="st">&quot;//b&quot;</span>)
+<span class="kw">xml_remove</span>(<span class="kw">xml_child</span>(x), <span class="dt">free =</span> <span class="ot">TRUE</span>)
+<span class="co"># bees[[1]] is no longer valid!!!</span>
+<span class="kw">rm</span>(bees)</code></pre></div>
 </div>
 <div id="namespaces" class="section level2">
 <h2>Namespaces</h2>
@@ -224,25 +252,20 @@ t3 &lt;-<span class="st"> </span><span class="kw">xml_children</span>(children[[
 <span class="kw">&lt;se:Name&gt;</span>My Layer<span class="kw">&lt;/se:Name&gt;</span>
 <span class="kw">&lt;/layer&gt;</span>
 <span class="kw">&lt;/sld&gt;</span></code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(magrittr)</code></pre></div>
-<pre><code>## 
-## Attaching package: 'magrittr'</code></pre>
-<pre><code>## The following objects are masked from 'package:testthat':
-## 
-##     equals, is_less_than, not</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">d &lt;-<span class="st"> </span><span class="kw">xml_new_document</span>() %&gt;%
-<span class="st">  </span><span class="kw">xml_add_child</span>(<span class="st">&quot;sld&quot;</span>,
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(magrittr)
+d &lt;-<span class="st"> </span><span class="kw">xml_new_root</span>(<span class="st">&quot;sld&quot;</span>,
     <span class="dt">xmlns =</span> <span class="st">&quot;http://www.o.net/sld&quot;</span>,
     <span class="st">&quot;xmlns:ogc&quot;</span> =<span class="st"> &quot;http://www.o.net/ogc&quot;</span>,
     <span class="st">&quot;xmlns:se&quot;</span> =<span class="st"> &quot;http://www.o.net/se&quot;</span>,
     <span class="dt">version =</span> <span class="st">&quot;1.1.0&quot;</span>) %&gt;%
 <span class="st">  </span><span class="kw">xml_add_child</span>(<span class="st">&quot;layer&quot;</span>) %&gt;%
-<span class="st">  </span><span class="kw">xml_add_child</span>(<span class="st">&quot;se:Name&quot;</span>) %&gt;%
+<span class="st">  </span><span class="kw">xml_add_child</span>(<span class="st">&quot;se:Name&quot;</span>, <span class="st">&quot;My Layer&quot;</span>) %&gt;%
 <span class="st">  </span><span class="kw">xml_root</span>()
 
-<span class="kw">cat</span>(<span class="kw">as.character</span>(d))</code></pre></div>
-<pre><code>## &lt;?xml version=&quot;1.0&quot;?&gt;
-## &lt;sld xmlns=&quot;http://www.o.net/sld&quot; xmlns:ogc=&quot;http://www.o.net/ogc&quot; xmlns:se=&quot;http://www.o.net/se&quot; version=&quot;1.1.0&quot;&gt;&lt;layer&gt;&lt;se:Name/&gt;&lt;/layer&gt;&lt;/sld&gt;</code></pre>
+d
+<span class="co">#&gt; {xml_document}</span>
+<span class="co">#&gt; &lt;sld version=&quot;1.1.0&quot; xmlns=&quot;http://www.o.net/sld&quot; xmlns:ogc=&quot;http://www.o.net/ogc&quot; xmlns:se=&quot;http://www.o.net/se&quot;&gt;</span>
+<span class="co">#&gt; [1] &lt;layer&gt;\n  &lt;se:Name&gt;My Layer&lt;/se:Name&gt;\n&lt;/layer&gt;</span></code></pre></div>
 </div>
 </div>
 

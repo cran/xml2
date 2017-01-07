@@ -14,9 +14,10 @@ by \code{\link{xml_ns}}. If provided, all names will be explicitly
 qualified with the ns prefix, i.e. if the element \code{bar} is defined
 in namespace \code{foo}, it will be called \code{foo:bar}. (And
 similarly for atttributes). Default namespaces must be given an explicit
-name.}
+name. The ns is ignored when using \code{\link{xml_name<-}} and
+\code{\link{xml_set_name}}.}
 
-\item{...}{Needed for compatability with generic. Unused.}
+\item{...}{Needed for compatibility with generic. Unused.}
 }
 \description{
 This turns an XML document (or node or nodeset) into the equivalent R
@@ -30,7 +31,10 @@ children that an element might have:
 
 \itemize{
   \item Other elements, converted to lists.
-  \item Attributes, stored as R attributes.
+  \item Attributes, stored as R attributes. Attributes that have special meanings in R
+          (\code{\link{class}}, \code{\link{comment}}, \code{\link{dim}},
+          \code{\link{dimnames}}, \code{\link{names}}, \code{\link{row.names}} and
+          \code{\link{tsp}}) are escaped with '.'
   \item Text, stored as a character vector.
 }
 }
@@ -40,4 +44,3 @@ as_list(read_xml("<foo> <bar><baz /></bar> </foo>"))
 as_list(read_xml("<foo id = 'a'></foo>"))
 as_list(read_xml("<foo><bar id='a'/><bar id='b'/></foo>"))
 }
-

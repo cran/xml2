@@ -1,5 +1,8 @@
-## ------------------------------------------------------------------------
+## ---- echo = FALSE, message = FALSE--------------------------------------
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(xml2)
+
+## ------------------------------------------------------------------------
 x <- read_xml("<p>This is some <b>text</b>. This is more.</p>")
 xml_text(x)
 
@@ -23,10 +26,17 @@ xml_attr(x, "href")
 
 xml_attrs(x) <- c(id = "xml2", href = "https://github.com/hadley/xml2")
 xml_attrs(x)
-cat(as.character(x))
+x
 
 xml_attrs(x) <- NULL
-cat(as.character(x))
+x
+
+# Namespaces are added with as a xmlns or xmlns:prefix attribute
+xml_attr(x, "xmlns") <- "http://foo"
+x
+
+xml_attr(x, "xmlns:bar") <- "http://bar"
+x
 
 ## ------------------------------------------------------------------------
 x <- read_xml("<a><b/></a>")
@@ -73,15 +83,14 @@ x
 
 ## ------------------------------------------------------------------------
 library(magrittr)
-d <- xml_new_document() %>%
-  xml_add_child("sld",
+d <- xml_new_root("sld",
     xmlns = "http://www.o.net/sld",
     "xmlns:ogc" = "http://www.o.net/ogc",
     "xmlns:se" = "http://www.o.net/se",
     version = "1.1.0") %>%
   xml_add_child("layer") %>%
-  xml_add_child("se:Name") %>%
+  xml_add_child("se:Name", "My Layer") %>%
   xml_root()
 
-cat(as.character(d))
+d
 

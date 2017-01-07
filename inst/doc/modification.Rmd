@@ -9,6 +9,11 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r, echo = FALSE, message = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(xml2)
+```
+
 # Modifying Existing XML
 
 Modifying existing XML can be done in xml2 by using the replacement functions
@@ -23,7 +28,6 @@ text node only the first will be affected. If you want to modify additional
 text nodes you need to select them explicitly with `/text()`.
 
 ```{r}
-library(xml2)
 x <- read_xml("<p>This is some <b>text</b>. This is more.</p>")
 xml_text(x)
 
@@ -39,11 +43,11 @@ xml_text(x)
 xml_structure(x)
 ```
 
-## Attribute Modification ##
+## Attribute and Namespace Definition Modification ##
 
-Attributes are modified one at a time with `xml_attr()` or all at once with
-`xml_attrs()`. In both cases using `NULL` as the value will remove the
-attribute completely.
+Attributes and namespace definitions are modified one at a time with
+`xml_attr()` or all at once with `xml_attrs()`. In both cases using `NULL` as
+the value will remove the attribute completely.
 
 ```{r}
 x <- read_xml("<a href='invalid!'>xml2</a>")
@@ -54,10 +58,17 @@ xml_attr(x, "href")
 
 xml_attrs(x) <- c(id = "xml2", href = "https://github.com/hadley/xml2")
 xml_attrs(x)
-cat(as.character(x))
+x
 
 xml_attrs(x) <- NULL
-cat(as.character(x))
+x
+
+# Namespaces are added with as a xmlns or xmlns:prefix attribute
+xml_attr(x, "xmlns") <- "http://foo"
+x
+
+xml_attr(x, "xmlns:bar") <- "http://bar"
+x
 ```
 
 ## Name Modification ##
@@ -73,7 +84,7 @@ x
 ```
 
 # Node modification #
-All of these functions have a `copy` argument. If this is set to `FALSE` they
+All of these functions have a `.copy` argument. If this is set to `FALSE` they
 will remove the new node from its location before inserting it into the new
 location. Otherwise they make a copy of the node before insertion.
 
@@ -89,7 +100,7 @@ xml_replace(t1, t3)
 x
 ```
 
-## Append sibling ##
+## Add a sibling ##
 ```{r}
 x <- read_xml("<parent><child>1</child><child>2<child>3</child></child></parent>")
 children <- xml_children(x)
@@ -119,6 +130,42 @@ xml_add_child(t1, read_xml("<test/>"))
 x
 ```
 
+## Removing nodes ##
+The `xml_remove()` can be used to remove a node (and it's children) from a
+tree. The default behavior is to unlink the node from the tree, but does _not_
+free the memory for the node, so R objects pointing to the node are still
+valid.
+
+This allows code like the following to work without crashing R
+
+```r
+x <- read_xml("<foo><bar><baz/><bar></foo>")
+x1 <- x %>% xml_children() %>% .[[1]]
+x2 <- x1 %>% xml_children() %>% .[[1]]
+
+xml_remove(x1)
+rm(x1)
+gc()
+
+x2
+```
+If you are not planning on referencing these nodes again this memory is wasted.
+Calling `xml_remove(free = TRUE)` will remove the nodes _and_ free the memory
+used to store them.  **Note** In this case _any_ node which previously pointed
+to the node or it's children will instead be pointing to free memory and may
+cause R to crash. xml2 can't figure this out for you, so it's your
+responsibility to remove any objects which are no longer valid.
+
+In particular `xml_find_*()` results are easy to overlook, for example
+
+```r
+x <- read_xml("<a><b /><b><b /></b></a>")
+bees <- xml_find_all(x, "//b")
+xml_remove(xml_child(x), free = TRUE)
+# bees[[1]] is no longer valid!!!
+rm(bees)
+```
+
 ## Namespaces ##
 
 We want to construct a document with the following namespace layout. (From
@@ -137,15 +184,14 @@ http://stackoverflow.com/questions/32939229/creating-xml-in-r-with-namespaces/32
 
 ```{r}
 library(magrittr)
-d <- xml_new_document() %>%
-  xml_add_child("sld",
+d <- xml_new_root("sld",
     xmlns = "http://www.o.net/sld",
     "xmlns:ogc" = "http://www.o.net/ogc",
     "xmlns:se" = "http://www.o.net/se",
     version = "1.1.0") %>%
   xml_add_child("layer") %>%
-  xml_add_child("se:Name") %>%
+  xml_add_child("se:Name", "My Layer") %>%
   xml_root()
 
-cat(as.character(d))
+d
 ```

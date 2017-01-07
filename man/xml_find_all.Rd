@@ -2,10 +2,10 @@
 % Please edit documentation in R/xml_find.R
 \name{xml_find_all}
 \alias{xml_find_all}
-\alias{xml_find_chr}
 \alias{xml_find_first}
-\alias{xml_find_lgl}
 \alias{xml_find_num}
+\alias{xml_find_chr}
+\alias{xml_find_lgl}
 \alias{xml_find_one}
 \title{Find nodes that match an xpath expression.}
 \usage{
@@ -29,7 +29,8 @@ by \code{\link{xml_ns}}. If provided, all names will be explicitly
 qualified with the ns prefix, i.e. if the element \code{bar} is defined
 in namespace \code{foo}, it will be called \code{foo:bar}. (And
 similarly for atttributes). Default namespaces must be given an explicit
-name.}
+name. The ns is ignored when using \code{\link{xml_name<-}} and
+\code{\link{xml_set_name}}.}
 }
 \value{
 \code{xml_find_all} always returns a nodeset: if there are no matches
@@ -57,6 +58,7 @@ if there's no match you'll get an \code{xml_missing} node.
 \code{xml_find_one()} has been deprecated. Instead use
 \code{xml_find_first()}.
 }
+
 \examples{
 x <- read_xml("<foo><bar><baz/></bar><baz/></foo>")
 xml_find_all(x, ".//baz")
@@ -102,4 +104,3 @@ xml_find_all(x, ".//f:doc", xml_ns(x))
 \seealso{
 \code{\link{xml_ns_strip}} to remove the default namespaces
 }
-

@@ -6,7 +6,8 @@
 #'   qualified with the ns prefix, i.e. if the element \code{bar} is defined
 #'   in namespace \code{foo}, it will be called \code{foo:bar}. (And
 #'   similarly for atttributes). Default namespaces must be given an explicit
-#'   name.
+#'   name. The ns is ignored when using \code{\link{xml_name<-}} and
+#'   \code{\link{xml_set_name}}.
 #' @return A character vector.
 #' @export
 #' @examples
@@ -38,8 +39,8 @@ xml_name.xml_node <- function(x, ns = character()) {
 #' Modify the (tag) name of an element
 #'
 #' @inheritParams xml_name
-#' @param ns ignored for assignment
 #' @param value a character vector with replacement name.
+#' @rdname xml_name
 #' @export
 `xml_name<-` <- function(x, ns = character(), value) {
    UseMethod("xml_name<-")
@@ -53,9 +54,39 @@ xml_name.xml_node <- function(x, ns = character()) {
 
 #' @export
 `xml_name<-.xml_nodeset` <- function(x, ns = character(), value) {
+  if (length(x) == 0) {
+    return(x)
+  }
   if (!is.list(ns)) {
      ns <- list(ns)
   }
   Map(`xml_name<-`, x, ns, value)
   x
 }
+
+#' @export
+`xml_name<-.xml_missing` <- function(x, ns = character(), value) {
+  x
+}
+
+set_name <- function(x, value, ns = character()) {
+  xml_name(x = x, ns = ns) <- value
+  x
+}
+
+#' @rdname xml_name
+#' @inheritParams xml_name
+#' @export
+#' @export
+xml_set_name <- function(x, value, ns = character()) {
+  UseMethod("xml_set_name")
+}
+
+#' @export
+xml_set_name.xml_node <- set_name
+
+#' @export
+xml_set_name.xml_nodeset <- set_name
+
+#' @export
+xml_set_name.xml_missing <- set_name

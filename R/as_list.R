@@ -10,12 +10,15 @@
 #'
 #' \itemize{
 #'   \item Other elements, converted to lists.
-#'   \item Attributes, stored as R attributes.
+#'   \item Attributes, stored as R attributes. Attributes that have special meanings in R
+#'           (\code{\link{class}}, \code{\link{comment}}, \code{\link{dim}},
+#'           \code{\link{dimnames}}, \code{\link{names}}, \code{\link{row.names}} and
+#'           \code{\link{tsp}}) are escaped with '.'
 #'   \item Text, stored as a character vector.
 #' }
 #'
 #' @inheritParams xml_name
-#' @param ... Needed for compatability with generic. Unused.
+#' @param ... Needed for compatibility with generic. Unused.
 #' @export
 #' @examples
 #' as_list(read_xml("<foo> a <b /><c><![CDATA[<d></d>]]></c></foo>"))
@@ -29,6 +32,17 @@ as_list <- function(x, ns = character(), ...) {
 #' @export
 as_list.xml_missing <- function(x, ns = character(), ...) {
   list()
+}
+
+# @export
+as_list.xml_document <- function(x, ns = character(), ...) {
+  if (!inherits(x, "xml_node")) {
+    return(list())
+  }
+
+  out <- list(NextMethod())
+  names(out) <- xml_name(x)
+  out
 }
 
 #' @export
@@ -54,14 +68,39 @@ as_list.xml_node <- function(x, ns = character(), ...) {
   }
 
   # Add xml attributes as R attributes
-  attr <- xml_attrs(x, ns = ns)
-  if (length(attr) > 0)
-    attributes(out) <- as.list(attr)
+  attributes(out) <- c(list(names = names(out)), xml_to_r_attrs(xml_attrs(x, ns = ns)))
 
   out
 }
 
 #' @export
 as_list.xml_nodeset <- function(x, ns = character(), ...) {
-  lapply(seq_along(x), function(i) as.list(x[[i]], ns = ns))
+  lapply(seq_along(x), function(i) as_list(x[[i]], ns = ns))
+}
+
+special_attributes <- c("class", "comment", "dim", "dimnames", "names", "row.names", "tsp")
+
+xml_to_r_attrs <- function(x) {
+  if (length(x) == 0) {
+    return(NULL)
+  }
+  # escape special names
+  special <- names(x) %in% special_attributes
+  names(x)[special] <- paste0(".", names(x)[special])
+  as.list(x)
+}
+
+r_attrs_to_xml <- function(x) {
+  if (length(x) == 0) {
+    return(NULL)
+  }
+
+  # Drop R special attributes
+  x <- x[!names(x) %in% special_attributes]
+
+  # Rename any xml attributes needed
+  special <- names(x) %in% paste0(".", special_attributes)
+
+  names(x)[special] <- sub("^\\.", "", names(x)[special])
+  x
 }

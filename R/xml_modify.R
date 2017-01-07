@@ -1,14 +1,19 @@
 #' Modify a tree by inserting, replacing or removing nodes
 #'
-#' \code{xml_add_sbling()} and \code{xml_add_child()} are used to insert a node
-#' as a sibling or a child. \code{xml_replace()} replaces an existing node with
-#' a new node. \code{xml_remove()} removes a node from the tree.
+#' \code{xml_add_sibling()} and \code{xml_add_child()} are used to insert a node
+#' as a sibling or a child. \code{xml_add_parent()} adds a new parent in
+#' between the input node and the current parent. \code{xml_replace()}
+#' replaces an existing node with a new node. \code{xml_remove()} removes a
+#' node from the tree.
 #'
 #' @details Care needs to be taken when using \code{xml_remove()},
 #' @param .x a document, node or nodeset.
 #' @param .copy whether to copy the \code{.value} before replacing. If this is \code{FALSE}
 #'   then the node will be moved from it's current location.
-#' @param .where whether to add \code{.value} before or after \code{.x}.
+#' @param .where to add thenew node, for \code{xml_add_child} the position
+#' after which to add, use \code{0} for the first child. For
+#' \code{xml_add_sibling} either \sQuote{"befeore"} or \sQuote{"after"}
+#' indicating if the new node should be before or after \code{.x}.
 #' @param ... If named attributes or namespaces to set on the node, if unnamed
 #' text to assign to the node.
 #' @param .value node or nodeset to insert.
@@ -23,14 +28,18 @@ xml_replace <- function(.x, .value, ..., .copy = TRUE) {
 #' @export
 xml_replace.xml_node <- function(.x, .value, ..., .copy = TRUE) {
 
-  node <- create_node(.value, .x, ...)
+  node <- create_node(.value, .x, .copy = .copy, ...)
 
-  .x$node <- node_replace(.x$node, node$node, .copy)
-  .x
+  .x$node <- node_replace(.x$node, node$node)
+  node
 }
 
 #' @export
 xml_replace.xml_nodeset <- function(.x, .value, ..., .copy = TRUE) {
+
+  if (length(.x) == 0) {
+    return(.x)
+  }
 
   # Need to wrap this in a list if a bare xml_node so it is recycled properly
   if (inherits(.value, "xml_node")) {
@@ -38,6 +47,11 @@ xml_replace.xml_nodeset <- function(.x, .value, ..., .copy = TRUE) {
   }
 
   Map(xml_replace, .x, .value, ..., .copy = .copy)
+}
+
+#' @export
+xml_replace.xml_missing <- function(.x, .value, ..., .copy = TRUE) {
+  .x
 }
 
 #' @rdname xml_replace
@@ -50,17 +64,21 @@ xml_add_sibling <- function(.x, .value, ..., .where = c("after", "before"), .cop
 xml_add_sibling.xml_node <- function(.x, .value, ..., .where = c("after", "before"), .copy = inherits(.value, "xml_node")) {
   .where <- match.arg(.where)
 
-  node <- create_node(.value, .x, ...)
+  node <- create_node(.value, .x, .copy = .copy, ...)
 
   .x$node <- switch(.where,
-    before = node_prepend_sibling(.x$node, node$node, .copy),
-    after = node_append_sibling(.x$node, node$node, .copy))
+    before = node_prepend_sibling(.x$node, node$node),
+    after = node_append_sibling(.x$node, node$node))
 
-  .x
+  invisible(.x)
 }
 
 #' @export
 xml_add_sibling.xml_nodeset <- function(.x, .value, ..., .where = c("after", "before"), .copy = TRUE) {
+  if (length(.x) == 0) {
+    return(.x)
+  }
+
   .where <- match.arg(.where)
 
   # Need to wrap this in a list if a bare xml_node so it is recycled properly
@@ -68,13 +86,34 @@ xml_add_sibling.xml_nodeset <- function(.x, .value, ..., .where = c("after", "be
     .value <- list(.value)
   }
 
-  Map(xml_add_sibling, rev(.x), rev(.value), ..., .where = .where, .copy = .copy)
+  invisible(Map(xml_add_sibling, rev(.x), rev(.value), ..., .where = .where, .copy = .copy))
+}
+
+#' @export
+xml_add_sibling.xml_missing <- function(.x, .value, ..., .where = c("after", "before"), .copy = TRUE) {
+  .x
 }
 
 # Helper function used in the xml_add* methods
-create_node <- function(.value, parent, ...) {
+create_node <- function(.value, parent, .copy, ...) {
   if (inherits(.value, "xml_node")) {
+    if (isTRUE(.copy)) {
+      .value$node <- node_copy(.value$node)
+    }
     return(.value)
+  }
+
+  if (inherits(.value, "xml_cdata")) {
+    return(xml_node(node_cdata_new(parent$doc, .value), doc = parent$doc))
+  }
+
+  if (inherits(.value, "xml_comment")) {
+    return(xml_node(node_comment_new(.value), doc = parent$doc))
+  }
+
+  if (inherits(.value, "xml_dtd")) {
+    node_new_dtd(parent$doc, .value$name, .value$external_id, .value$system_id)
+    return()
   }
 
   if (!is.character(.value)) {
@@ -99,42 +138,96 @@ create_node <- function(.value, parent, ...) {
 
 #' @rdname xml_replace
 #' @export
-xml_add_child <- function(.x, .value, ..., .copy = TRUE) {
+xml_add_child <- function(.x, .value, ..., .where = length(xml_children(.x)), .copy = TRUE) {
   UseMethod("xml_add_child")
 }
 
 #' @export
-xml_add_child.xml_node <- function(.x, .value, ..., .copy = inherits(.value, "xml_node")) {
+xml_add_child.xml_node <- function(.x, .value, ..., .where = length(xml_children(.x)), .copy = inherits(.value, "xml_node")) {
 
-  node <- create_node(.value, .x, ...)
-  node_add_child(.x$node, node$node, .copy)
+  node <- create_node(.value, .x, .copy = .copy, ...)
 
-  node
+  num_children <- length(xml_children(.x))
+
+  if (.where >= num_children) {
+    node_append_child(.x$node, node$node)
+  } else if (.where == 0L) {
+    node_prepend_sibling(xml_child(.x, search = 1)$node, node$node)
+  } else {
+    node_append_sibling(xml_child(.x, search = .where)$node, node$node)
+  }
+
+  invisible(node)
 }
 
 #' @export
-xml_add_child.xml_document <- function(.x, .value, ..., .copy = inherits(.value, "xml_node")) {
+xml_add_child.xml_document <- function(.x, .value, ..., .where = length(xml_children(.x)), .copy = inherits(.value, "xml_node")) {
   if (inherits(.x, "xml_node")) {
     NextMethod("xml_add_child")
   } else {
-    node <- create_node(.value, .x, ...)
-    if (!doc_has_root(.x$doc)) {
-      doc_set_root(.x$doc, node$node)
+    node <- create_node(.value, .x, .copy = .copy, ...)
+    if (!is.null(node)) {
+      if (!doc_has_root(.x$doc)) {
+        doc_set_root(.x$doc, node$node)
+      }
+      node_append_child(doc_root(.x$doc), node$node)
     }
-    node_add_child(doc_root(.x$doc), node$node, .copy)
-    xml_document(.x$doc)
+    invisible(xml_document(.x$doc))
   }
 }
 
 #' @export
-xml_add_child.xml_nodeset <- function(.x, .value, ..., .copy = TRUE) {
+xml_add_child.xml_nodeset <- function(.x, .value, ..., .where = length(xml_children(.x)), .copy = TRUE) {
+  if (length(.x) == 0) {
+    return(.x)
+  }
 
   # Need to wrap this in a list if a bare xml_node so it is recycled properly
   if (inherits(.value, "xml_node")) {
     .value <- list(.value)
   }
 
-  Map(xml_add_child, .x, .value, ..., .copy = .copy)
+  res <- Map(xml_add_child, .x, .value, ..., .where = .where, .copy = .copy)
+  invisible(make_nodeset(res, res[[1]]$doc))
+}
+
+#' @export
+xml_add_child.xml_missing <- function(.x, .value, ..., .copy = TRUE) {
+  .x
+}
+
+#' @rdname xml_replace
+#' @export
+xml_add_parent <- function(.x, .value, ...) {
+  UseMethod("xml_add_parent")
+}
+
+#' @export
+xml_add_parent.xml_node <- function(.x, .value, ...) {
+  new_parent <- xml_replace(.x, .value = .value, ..., .copy = FALSE)
+  node <- xml_add_child(new_parent, .value = .x, .copy = FALSE)
+
+  invisible(node)
+}
+
+#' @export
+xml_add_parent.xml_nodeset <- function(.x, .value, ...) {
+  if (length(.x) == 0) {
+    return(.x)
+  }
+
+  # Need to wrap this in a list if a bare xml_node so it is recycled properly
+  if (inherits(.value, "xml_node")) {
+    .value <- list(.value)
+  }
+
+  res <- Map(xml_add_parent, .x, .value, ...)
+  invisible(make_nodeset(res, res[[1]]$doc))
+}
+
+#' @export
+xml_add_parent.xml_missing <- function(.x, .value, ..., .copy = TRUE) {
+  invisible(.x)
 }
 
 #' @rdname xml_replace
@@ -150,11 +243,17 @@ xml_remove.xml_node <- function(.x, free = FALSE) {
 
 #' @export
 xml_remove.xml_nodeset <- function(.x, free = FALSE) {
+  if (length(.x) == 0) {
+    return(.x)
+  }
+
   Map(xml_remove, rev(.x), free = free)
 }
 
-## Questions
-# - Assignment methods for xml_missing objects? Error, warning or identity
+#' @export
+xml_remove.xml_missing <- function(.x, free = FALSE) {
+  .x
+}
 
 #' Set the node's namespace
 #'
@@ -176,14 +275,30 @@ xml_set_namespace <- function(.x, prefix = "", uri = "") {
   invisible(.x)
 }
 
-#' Create a new document
+#' Create a new document, possibly with a root node
 #'
+#' \code{xml_new_document} creates only a new document without a root node. In
+#' most cases you should instead use \code{xml_new_root}, which creates a new
+#' document and assigns the root node in one step.
 #' @param version The version number of the document.
+#' @param encoding The character encoding to use in the document. The default
+#' encoding is \sQuote{UTF-8}. Available encodings are specified at
+#' \url{http://xmlsoft.org/html/libxml-encoding.html#xmlCharEncoding}.
 #' @return A \code{xml_document} object.
 #' @export
-xml_new_document <- function(version = "1.0") {
+# TODO: jimhester 2016-12-16 Deprecate this in the future?
+xml_new_document <- function(version = "1.0", encoding = "UTF-8") {
   doc <- doc_new(version)
   structure(list(doc = doc), class = "xml_document")
+}
+
+#' @param .version The version number of the document, passed to \code{xml_new_document(version)}.
+#' @param .encoding The encoding of the document, passed to \code{xml_new_document(encoding)}.
+#' @inheritParams xml_add_child
+#' @rdname xml_new_document
+#' @export
+xml_new_root <- function(.value, ..., .copy = inherits(.value, "xml_node"), .version = "1.0", .encoding = "UTF-8") {
+  xml_add_child(xml_new_document(version = .version, encoding = .encoding), .value = .value, ... = ..., .copy = .copy)
 }
 
 #' Strip the default namespaces from a document

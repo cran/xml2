@@ -1,7 +1,7 @@
 #' Extract or modify the text
 #'
 #' \code{xml_text} returns a character vector, \code{xml_double} returns a
-#' numeric vector, \code{xml_integer} returns an integer vector. 
+#' numeric vector, \code{xml_integer} returns an integer vector.
 #' @inheritParams xml_name
 #' @param trim If \code{TRUE} will trim leading and trailing spaces.
 #' @return A character vector, the same length as x.
@@ -33,7 +33,12 @@ xml_text.xml_missing <- function(x, trim = FALSE) {
 
 #' @export
 xml_text.xml_node <- function(x, trim = FALSE) {
-  node_text(x$node, trim = trim)
+  res <- node_text(x$node)
+  if (isTRUE(trim)) {
+    res <- sub("^[[:space:]\u00a0]+", "", res)
+    res <- sub("[[:space:]\u00a0]+$", "", res)
+  }
+  res
 }
 
 #' @export
@@ -50,6 +55,9 @@ xml_text.xml_nodeset <- function(x, trim = FALSE) {
 
 #' @export
 `xml_text<-.xml_nodeset` <- function(x, value) {
+  if (length(x) == 0) {
+    return(x)
+  }
   # We need to do the modification in reverse order as the modification can
   # potentially delete nodes
   Map(`xml_text<-`, rev(x), rev(value))
@@ -74,6 +82,15 @@ xml_text.xml_nodeset <- function(x, trim = FALSE) {
 
   x
 }
+
+#' @export
+`xml_text<-.xml_missing` <- function(x, value) {
+  NA_character_
+}
+
+#' @export
+#' @rdname xml_text
+`xml_set_text` <- `xml_text<-`
 
 #' @rdname xml_text
 #' @export
@@ -102,7 +119,7 @@ xml_integer <- function(x) {
 }
 
 #' @export
-xml_double.xml_missing <- function(x) {
+xml_integer.xml_missing <- function(x) {
   NA_integer_
 }
 
@@ -119,5 +136,5 @@ xml_integer.xml_node <- function(x) {
 
 #' @export
 xml_integer.xml_nodeset <- function(x) {
-  vapply(x, xml_integer, numeric(1))
+  vapply(x, xml_integer, integer(1))
 }
