@@ -1,5 +1,5 @@
 Package: xml2
-Version: 1.1.0
+Version: 1.1.1
 Title: Parse XML
 Description: Work with XML files using a simple, consistent interface. Built on
     top of the 'libxml2' C library.
@@ -27,7 +27,7 @@ Collate: 'RcppExports.R' 'as_list.R' 'xml_parse.R' 'as_xml_document.R'
         'xml_path.R' 'xml_schema.R' 'xml_serialize.R' 'xml_structure.R'
         'xml_text.R' 'xml_type.R' 'xml_url.R' 'xml_write.R' 'zzz.R'
 NeedsCompilation: yes
-Packaged: 2017-01-06 14:09:44 UTC; jhester
+Packaged: 2017-01-23 18:59:10 UTC; jhester
 Author: Hadley Wickham [aut],
   James Hester [aut, cre],
   Jeroen Ooms [aut],
@@ -35,4 +35,4 @@ Author: Hadley Wickham [aut],
   R Foundation [ctb] (Copy of R-project homepage cached as example)
 Maintainer: James Hester <james.hester@rstudio.com>
 Repository: CRAN
-Date/Publication: 2017-01-07 11:35:17
+Date/Publication: 2017-01-24 08:12:30

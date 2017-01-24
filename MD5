@@ -1,6 +1,6 @@
-7b22b59c2866c5626458b24a56acb5eb *DESCRIPTION
+41fdead785e140bf32600942eb4f9e89 *DESCRIPTION
 4e1f4a66127068f7885b1ce9fefedb07 *NAMESPACE
-6c96527e57c088cf54c238e7e8317b12 *NEWS.md
+3a64bcfa61c6c9c13b18f5787b47f0d2 *NEWS.md
 dfc441f52ec9da64eae00904f1d74ead *R/RcppExports.R
 efeedfe02bf29b68260c262df64d882d *R/as_list.R
 2e24c60fdf22a2aebfcaab2c91b03452 *R/as_xml_document.R
@@ -24,14 +24,14 @@ f459598b4712e40ab2dca73beb1a00ef *R/xml_url.R
 f47d60217e13f3b1173fe65e2f8c3a2f *R/xml_write.R
 ba02edba719f666ae5dffeb962b215df *R/zzz.R
 0bda8bcf4ea5b3c5d6b8df5fc8096ccb *README.md
-f4514a9a6c2e08612dba25767717a65a *build/vignette.rds
-79379862415a7bafaae7d68aa19aab39 *build/xml2.pdf
+2eab7055df24173da8d9dceb42bfbf3d *build/vignette.rds
+fdcbc809dab72bb56f18c2855695e675 *build/xml2.pdf
 6071edd604dbeb75308cfbedc7790398 *cleanup
 3c3ad3c3abb2a5ef3752d70a3cb2c59f *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 9bb95c171ea8d0083ec59b77dc9650b5 *inst/doc/modification.R
 ae51ba62548cf18322d5b3ec999de7eb *inst/doc/modification.Rmd
-ee9691f93fdf294dcd2401db6a33b55b *inst/doc/modification.html
+810a859169b081353b1f5c7922b7dec4 *inst/doc/modification.html
 aa42c312677d8bd431c9f6055bacc5a2 *inst/extdata/order-doc.xml
 d815540b17662ddb93faa91d78ba0e5f *inst/extdata/order-schema.xml
 3d75cb054004ba36cf5bb4cac44eb27c *inst/extdata/r-project.html
@@ -71,7 +71,7 @@ be2c92c3d2a0fb1ded1b2bc32a737fa4 *src/connection.cpp
 3c3e387db63660a3d30f5b9f7304294d *src/xml2_init.cpp
 c764718bad3bc105164a88bc881f9061 *src/xml2_namespace.cpp
 970127334c4f8989442bd8ea2788af47 *src/xml2_node.cpp
-03a4d6a31342fe701dd20d3b3beb575d *src/xml2_output.cpp
+4715fe28716054f4128a2b20c4b1316e *src/xml2_output.cpp
 f842d5236e178aa9ca5928386ce24fee *src/xml2_schema.cpp
 1c198cf53390d534d28d3f1d3507dec2 *src/xml2_url.cpp
 c0dd2aad034c8822def5607011821eb7 *src/xml2_utils.h
@@ -113,3 +113,4 @@ f4bb4584a48ef582d2e0ab24064a0ab9 *tests/testthat/test-xml_serialize.R
 116ac76436068562dbf9754f5a7e4263 *tests/testthat/test-xml_text.R
 50ce4b1afd65325497a8b4dcce763e94 *tools/winlibs.R
 ae51ba62548cf18322d5b3ec999de7eb *vignettes/modification.Rmd
+3f18329bae7b6fc7c5dc1e51227a06ce *vignettes/releases/xml2-1.1.0.Rmd
