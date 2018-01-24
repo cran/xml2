@@ -3,11 +3,14 @@
 
 #include <Rcpp.h>
 #include <libxml/tree.h>
-#include <boost/shared_ptr.hpp>
 #include <map>
 
 inline xmlChar* asXmlChar(std::string x) {
   return (xmlChar*) x.c_str();
+}
+
+inline xmlChar* asXmlChar(SEXP x, int n = 0) {
+  return (xmlChar*) CHAR(STRING_ELT(x, n));
 }
 
 inline Rcpp::CharacterVector asCharacterVector(std::string x) {

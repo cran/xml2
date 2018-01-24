@@ -38,7 +38,7 @@
 #' read_html(system.file("extdata", "r-project.html", package = "xml2"))
 #'
 #' # From a url
-#' cd <- read_xml("http://www.xmlfiles.com/examples/cd_catalog.xml")
+#' cd <- read_xml(xml2_example("cd_catalog.xml"))
 #' me <- read_html("http://had.co.nz")
 read_xml <- function(x, encoding = "", ..., as_html = FALSE, options = "NOBLANKS") {
   UseMethod("read_xml")
@@ -126,3 +126,25 @@ read_xml.response <- function(x, encoding = "", base_url = "", ...,
   xml2::read_xml(content, encoding = encoding, base_url = base_url,
     as_html = as_html, option = options, ...)
 }
+
+#' Download a HTML or XML file
+#'
+#' @inherit curl::curl_download
+#' @param file A character string with the name where the downloaded file is
+#'   saved.
+#' @seealso \link[curl]{curl_download}
+#' @export
+#' @examples
+#' \dontrun{
+#' download_html("http://tidyverse.org/index.html")
+#' }
+download_xml <- function(url, file = basename(url), quiet = TRUE, mode = "wb",
+  handle = curl::new_handle()) {
+  curl::curl_download(url, file, quiet = quiet, mode = mode, handle = handle)
+
+  invisible(file)
+}
+
+#' @export
+#' @rdname download_xml
+download_html <- download_xml

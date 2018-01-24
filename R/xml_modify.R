@@ -10,13 +10,13 @@
 #' @param .x a document, node or nodeset.
 #' @param .copy whether to copy the \code{.value} before replacing. If this is \code{FALSE}
 #'   then the node will be moved from it's current location.
-#' @param .where to add thenew node, for \code{xml_add_child} the position
+#' @param .where to add the new node, for \code{xml_add_child} the position
 #' after which to add, use \code{0} for the first child. For
-#' \code{xml_add_sibling} either \sQuote{"befeore"} or \sQuote{"after"}
+#' \code{xml_add_sibling} either \sQuote{"before"} or \sQuote{"after"}
 #' indicating if the new node should be before or after \code{.x}.
 #' @param ... If named attributes or namespaces to set on the node, if unnamed
 #' text to assign to the node.
-#' @param .value node or nodeset to insert.
+#' @param .value node to insert.
 #' @param free When removing the node also free the memory used for that node.
 #' Note if you use this option you cannot use any existing objects pointing to
 #' the node or its children, it is likely to crash R or return garbage.
@@ -147,14 +147,17 @@ xml_add_child.xml_node <- function(.x, .value, ..., .where = length(xml_children
 
   node <- create_node(.value, .x, .copy = .copy, ...)
 
-  num_children <- length(xml_children(.x))
-
-  if (.where >= num_children) {
-    node_append_child(.x$node, node$node)
-  } else if (.where == 0L) {
-    node_prepend_sibling(xml_child(.x, search = 1)$node, node$node)
+  if (.where == 0L) {
+    if(node_has_children(.x$node))
+      node_prepend_child(.x$node, node$node)
+    else
+      node_append_child(.x$node, node$node)
   } else {
-    node_append_sibling(xml_child(.x, search = .where)$node, node$node)
+    num_children <- length(xml_children(.x))
+    if (.where >= num_children) {
+      node_append_child(.x$node, node$node)
+    } else
+      node_append_sibling(xml_child(.x, search = .where)$node, node$node)
   }
 
   invisible(node)
@@ -239,20 +242,22 @@ xml_remove <- function(.x, free = FALSE) {
 #' @export
 xml_remove.xml_node <- function(.x, free = FALSE) {
   node_remove(.x$node, free = free)
+
+  invisible(.x)
 }
 
 #' @export
 xml_remove.xml_nodeset <- function(.x, free = FALSE) {
   if (length(.x) == 0) {
-    return(.x)
+    return(invisible(.x))
   }
 
-  Map(xml_remove, rev(.x), free = free)
+  invisible(Map(xml_remove, rev(.x), free = free))
 }
 
 #' @export
 xml_remove.xml_missing <- function(.x, free = FALSE) {
-  .x
+  invisible(.x)
 }
 
 #' Set the node's namespace

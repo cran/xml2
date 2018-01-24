@@ -23,7 +23,7 @@ xml_remove(.x, free = FALSE)
 \arguments{
 \item{.x}{a document, node or nodeset.}
 
-\item{.value}{node or nodeset to insert.}
+\item{.value}{node to insert.}
 
 \item{...}{If named attributes or namespaces to set on the node, if unnamed
 text to assign to the node.}
@@ -31,9 +31,9 @@ text to assign to the node.}
 \item{.copy}{whether to copy the \code{.value} before replacing. If this is \code{FALSE}
 then the node will be moved from it's current location.}
 
-\item{.where}{to add thenew node, for \code{xml_add_child} the position
+\item{.where}{to add the new node, for \code{xml_add_child} the position
 after which to add, use \code{0} for the first child. For
-\code{xml_add_sibling} either \sQuote{"befeore"} or \sQuote{"after"}
+\code{xml_add_sibling} either \sQuote{"before"} or \sQuote{"after"}
 indicating if the new node should be before or after \code{.x}.}
 
 \item{free}{When removing the node also free the memory used for that node.

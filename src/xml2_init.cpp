@@ -10,22 +10,22 @@ void handleError(void* userData, xmlError* error) {
   message.resize(message.size() - 1); // trim off trailing newline
 
   if (error->level <= 2) {
-    Rcpp::warning("%s [%i]", message, error->code);
+    Rf_warning("%s [%i]", message.c_str(), error->code);
   } else {
     Rcpp::stop("%s [%i]", message, error->code);
   }
 }
 
+// [[Rcpp::export]]
+void init_libxml2() {
+  // Check that header and libs are compatible
+  LIBXML_TEST_VERSION
+
+  xmlInitParser();
+  xmlSetStructuredErrorFunc(NULL, handleError);
+}
+
 extern "C" {
-
-  void R_init_xml2(DllInfo *info) {
-    // Check that header and libs are compatible
-    LIBXML_TEST_VERSION
-
-    xmlInitParser();
-    xmlSetStructuredErrorFunc(NULL, handleError);
-  }
-
   void R_unload_xml2(DllInfo *info) {
     xmlCleanupParser();
   }
