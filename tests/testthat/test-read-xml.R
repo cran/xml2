@@ -1,5 +1,15 @@
 context("read_xml")
 
+test_that("read_xml errors with an empty document", {
+  expect_error(read_xml(character()), "Document is empty")
+
+  tf <- tempfile()
+  file.create(tf)
+  on.exit(unlink(tf))
+
+  expect_error(read_xml(tf), "Document is empty")
+})
+
 test_that("read_html correctly parses malformed document", {
   lego <- read_html("lego.html.bz2")
   expect_equal(length(xml_find_all(lego, ".//p")), 39)
@@ -40,6 +50,8 @@ test_that("read_html properly passes parser arguments", {
 
 test_that("read_xml works with httr response objects", {
   skip_on_cran()
+  skip_if_offline()
+  skip_if_not_installed("httr")
 
   x <- read_xml(httr::GET("http://httpbin.org/xml"))
   expect_is(x, "xml_document")
@@ -49,9 +61,27 @@ test_that("read_xml works with httr response objects", {
 
 test_that("read_html works with httr response objects", {
   skip_on_cran()
+  skip_if_offline()
 
   x <- read_html(httr::GET("http://httpbin.org/xml"))
   expect_is(x, "xml_document")
 
   expect_equal(length(xml_find_all(x, "//slide")), 2)
+})
+
+test_that("read_xml and read_html fail for bad status codes", {
+
+  skip_on_cran()
+  skip_if_not_installed("httr")
+  skip_if_offline()
+
+  expect_error(
+    read_xml(httr::GET("http://httpbin.org/status/404")),
+    class = "http_404"
+  )
+
+  expect_error(
+    read_html(httr::GET("http://httpbin.org/status/404")),
+    class = "http_404"
+  )
 })

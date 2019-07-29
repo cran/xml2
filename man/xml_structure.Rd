@@ -5,14 +5,22 @@
 \alias{html_structure}
 \title{Show the structure of an html/xml document.}
 \usage{
-xml_structure(x, indent = 2)
+xml_structure(x, indent = 2, file = "")
 
-html_structure(x, indent = 2)
+html_structure(x, indent = 2, file = "")
 }
 \arguments{
 \item{x}{HTML/XML document (or part there of)}
 
 \item{indent}{Number of spaces to ident}
+
+\item{file}{A \link{connection}, or a character string naming the file
+    to print to.  If \code{""} (the default), \code{cat} prints to the
+    standard output connection, the console unless redirected by
+    \code{\link{sink}}.
+    If it is \code{"|cmd"}, the output is piped to the command given
+    by \file{cmd}, by opening a pipe connection.
+  }
 }
 \description{
 Show the structure of an html/xml document without displaying any of

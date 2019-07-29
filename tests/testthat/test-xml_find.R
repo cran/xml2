@@ -39,7 +39,9 @@ test_that("qualified names matches to namespace", {
 
 test_that("warning if unknown namespace", {
   x <- read_xml("<foo><bar /></foo>")
-  expect_warning(xml_find_all(x, "//g:bar"), "Undefined namespace prefix")
+  maybe_error(
+    expect_warning(xml_find_all(x, "//g:bar"), "Undefined namespace prefix"),
+    "evaluation failed")
 })
 
 test_that("no matches returns empty nodeset", {
@@ -128,4 +130,12 @@ test_that("Searches with empty inputs retain type stability", {
   expect_equal(xml_find_chr(empty, "string(0.5)"), character())
 
   expect_equal(xml_find_lgl(empty, "1=1"), logical())
+})
+
+test_that("Searches with entities work (#241)", {
+  res <- read_xml(test_path("records.xml"), options = "DTDVALID")
+
+  field1 <- xml_find_all(res, "//field1")
+
+  expect_equal(xml_text(field1), "foo bar Quantitative Consultancy")
 })
