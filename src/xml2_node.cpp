@@ -49,7 +49,7 @@ bool hasPrefix(std::string lhs, std::string rhs) {
       rhs.begin());
 }
 
-const xmlChar* xmlNsDefinition(xmlNodePtr node, xmlChar* lookup) {
+const xmlChar* xmlNsDefinition(xmlNodePtr node, const xmlChar* lookup) {
   xmlNsPtr next = node->nsDef;
 
   while(next != NULL) {
@@ -254,7 +254,7 @@ void xmlAddNamespace(xmlNodePtr tree, xmlNsPtr ns) {
   return;
 }
 
-void removeNs(xmlNodePtr node, xmlChar* prefix) {
+void removeNs(xmlNodePtr node, const xmlChar* prefix) {
   if (node == NULL) {
     return;
   }
@@ -495,6 +495,12 @@ void node_set_content(XPtrNode node, std::string content) {
 // [[Rcpp::export]]
 void node_append_content(XPtrNode node, std::string content) {
   return xmlNodeAddContentLen(node.checked_get(), asXmlChar(content), content.size());
+}
+
+// [[Rcpp::export]]
+void node_new_text(XPtrNode node, std::string content) {
+  xmlAddChild(node.checked_get(), xmlNewTextLen(asXmlChar(content), content.size()));
+  return;
 }
 
 // [[Rcpp::export]]

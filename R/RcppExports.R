@@ -45,8 +45,8 @@ init_libxml2 <- function() {
     invisible(.Call(`_xml2_init_libxml2`))
 }
 
-libxml2_version <- function() {
-    .Call(`_xml2_libxml2_version`)
+libxml2_version_ <- function() {
+    .Call(`_xml2_libxml2_version_`)
 }
 
 unique_ns <- function(ns) {
@@ -139,6 +139,10 @@ node_set_content <- function(node, content) {
 
 node_append_content <- function(node, content) {
     invisible(.Call(`_xml2_node_append_content`, node, content))
+}
+
+node_new_text <- function(node, content) {
+    invisible(.Call(`_xml2_node_new_text`, node, content))
 }
 
 node_append_child <- function(parent, cur) {

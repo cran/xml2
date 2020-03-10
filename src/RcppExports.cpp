@@ -134,13 +134,13 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// libxml2_version
-std::string libxml2_version();
-RcppExport SEXP _xml2_libxml2_version() {
+// libxml2_version_
+std::string libxml2_version_();
+RcppExport SEXP _xml2_libxml2_version_() {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(libxml2_version());
+    rcpp_result_gen = Rcpp::wrap(libxml2_version_());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -410,6 +410,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< XPtrNode >::type node(nodeSEXP);
     Rcpp::traits::input_parameter< std::string >::type content(contentSEXP);
     node_append_content(node, content);
+    return R_NilValue;
+END_RCPP
+}
+// node_new_text
+void node_new_text(XPtrNode node, std::string content);
+RcppExport SEXP _xml2_node_new_text(SEXP nodeSEXP, SEXP contentSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< XPtrNode >::type node(nodeSEXP);
+    Rcpp::traits::input_parameter< std::string >::type content(contentSEXP);
+    node_new_text(node, content);
     return R_NilValue;
 END_RCPP
 }
@@ -763,7 +774,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_xml2_doc_set_root", (DL_FUNC) &_xml2_doc_set_root, 2},
     {"_xml2_doc_is_html", (DL_FUNC) &_xml2_doc_is_html, 1},
     {"_xml2_init_libxml2", (DL_FUNC) &_xml2_init_libxml2, 0},
-    {"_xml2_libxml2_version", (DL_FUNC) &_xml2_libxml2_version, 0},
+    {"_xml2_libxml2_version_", (DL_FUNC) &_xml2_libxml2_version_, 0},
     {"_xml2_unique_ns", (DL_FUNC) &_xml2_unique_ns, 1},
     {"_xml2_doc_namespaces", (DL_FUNC) &_xml2_doc_namespaces, 1},
     {"_xml2_ns_lookup_uri", (DL_FUNC) &_xml2_ns_lookup_uri, 3},
@@ -787,6 +798,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_xml2_node_copy", (DL_FUNC) &_xml2_node_copy, 1},
     {"_xml2_node_set_content", (DL_FUNC) &_xml2_node_set_content, 2},
     {"_xml2_node_append_content", (DL_FUNC) &_xml2_node_append_content, 2},
+    {"_xml2_node_new_text", (DL_FUNC) &_xml2_node_new_text, 2},
     {"_xml2_node_append_child", (DL_FUNC) &_xml2_node_append_child, 2},
     {"_xml2_node_prepend_child", (DL_FUNC) &_xml2_node_prepend_child, 2},
     {"_xml2_node_prepend_sibling", (DL_FUNC) &_xml2_node_prepend_sibling, 2},
