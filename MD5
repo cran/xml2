@@ -1,6 +1,6 @@
-3dbc20539db230f72b188b1af8aceb94 *DESCRIPTION
+d6a5405b356a6ce98c26afbf14fb4153 *DESCRIPTION
 1f8840b8c0576ae87c8df8d7d77e6b9f *NAMESPACE
-c70f27b46a2705bb6a1919681efbf3ef *NEWS.md
+b2228759fb7d4b51e5a2ca5502ccfba0 *NEWS.md
 3d54817c5882ff396232b80811fc4867 *R/RcppExports.R
 e666e6c65a95b36309a45087dbc3c200 *R/S4.R
 4c50d1baef6a82688f67ff03b92d35ef *R/as_list.R
@@ -27,13 +27,13 @@ c0a6b1f6311631c030088f6271f7f14c *R/xml_write.R
 ba02edba719f666ae5dffeb962b215df *R/zzz.R
 7c314d99f1ca99f7cd3e69c6b376c3ad *README.md
 8289d020b6bda291a6bc14cd17d82972 *build/vignette.rds
-7282379a602d0b5bc38bd6a66b095c45 *build/xml2.pdf
+48163c1e5e48b8fca3f9ababe29aa8c4 *build/xml2.pdf
 6071edd604dbeb75308cfbedc7790398 *cleanup
-f0d5ab22f190b3a8876085a72da917dc *configure
+0ca14a6efb702e7a9651afe003025d74 *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 71e4c691330a0c3874257f80e782e091 *inst/doc/modification.R
 59426c1676cc6681db7e45ca88f94357 *inst/doc/modification.Rmd
-633456a46f448cd40e7ae4fd5ea03a79 *inst/doc/modification.html
+f136129fa307a92131c5148fc59c2fa6 *inst/doc/modification.html
 f8254da868eddec64a4768db0a43ae14 *inst/extdata/cd_catalog.xml
 aa42c312677d8bd431c9f6055bacc5a2 *inst/extdata/order-doc.xml
 d815540b17662ddb93faa91d78ba0e5f *inst/extdata/order-schema.xml
