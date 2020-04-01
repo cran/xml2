@@ -1,5 +1,4 @@
 #' @useDynLib xml2, .registration = TRUE
-#' @importFrom Rcpp sourceCpp
 NULL
 
 # node -------------------------------------------------------------------------
@@ -15,7 +14,7 @@ xml_node <- function(node = NULL, doc = NULL) {
 #' @export
 as.character.xml_node <- function(x, ..., options = "format", encoding = "UTF-8") {
   options  <- parse_options(options, xml_save_options())
-  node_write_character(x$node, options = options, encoding = encoding)
+  .Call(node_write_character, x$node, encoding, options)
 }
 
 #' @export
@@ -34,8 +33,8 @@ print.xml_missing <- function(x, width = getOption("width"), max_n = 20, ...) {
 # document ---------------------------------------------------------------------
 
 xml_document <- function(doc) {
-  if (doc_has_root(doc)) {
-    x <- xml_node(doc_root(doc), doc)
+  if (.Call(doc_has_root, doc)) {
+    x <- xml_node(.Call(doc_root, doc), doc)
     class(x) <- c("xml_document", class(x))
     x
   } else {
@@ -47,7 +46,7 @@ doc_type <- function(x) {
   if (is.null(x$doc)) {
     return("xml")
   }
-  if (doc_is_html(x$doc)) {
+  if (.Call(doc_is_html, x$doc)) {
     "html"
   } else {
     "xml"
@@ -67,14 +66,14 @@ print.xml_document <- function(x, width = getOption("width"), max_n = 20, ...) {
 #' @export
 as.character.xml_document <- function(x, ..., options = "format", encoding = "UTF-8") {
   options  <- parse_options(options, xml_save_options())
-  doc_write_character(x$doc, options = options, encoding = encoding)
+  .Call(doc_write_character, x$doc, encoding, options)
 }
 
 # nodeset ----------------------------------------------------------------------
 
 xml_nodeset <- function(nodes = list(), deduplicate = TRUE) {
   if (isTRUE(deduplicate)) {
-    nodes <- nodes[!nodes_duplicated(nodes)]
+    nodes <- nodes[!.Call(nodes_duplicated, nodes)]
   }
   structure(nodes, class = "xml_nodeset")
 }

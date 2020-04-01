@@ -44,12 +44,12 @@ write_xml.xml_document <- function(x, file, ..., options = "format", encoding = 
       open(file, "wb")
       on.exit(close(file))
     }
-    doc_write_connection(x$doc, file, options = options, encoding = encoding)
+    .Call(doc_write_connection, x$doc, file, encoding, options)
   } else {
     if (!(is.character(file) && length(file) == 1 && nzchar(file))) {
       stop("`file` must be a non-zero character of length 1", call. = FALSE)
     }
-    doc_write_file(x$doc, file, options = options, encoding = encoding)
+    .Call(doc_write_file, x$doc, file, encoding, options)
   }
 }
 
@@ -67,12 +67,12 @@ write_xml.xml_nodeset <- function(x, file, ..., options = "format", encoding = "
       open(file, "wb")
       on.exit(close(file))
     }
-    node_write_connection(x[[1]]$node, file, options = options, encoding = encoding)
+    .Call(node_write_connection, x[[1]]$node, file, encoding, options)
   } else {
     if (!(is.character(file) && length(file) == 1 && nzchar(file))) {
       stop("`file` must be a non-zero character of length 1", call. = FALSE)
     }
-    node_write_file(x[[1]]$node, file, options = options, encoding = encoding)
+    .Call(node_write_file, x[[1]]$node, file, encoding, options)
   }
 }
 
@@ -86,12 +86,12 @@ write_xml.xml_node <- function(x, file, ..., options = "format", encoding = "UTF
       open(file, "wb")
       on.exit(close(file))
     }
-    node_write_connection(x$node, file, options = options, encoding = encoding)
+    .Call(node_write_connection, x$node, file, encoding, options)
   } else {
     if (!(is.character(file) && length(file) == 1 && nzchar(file))) {
       stop("`file` must be a non-zero character of length 1", call. = FALSE)
     }
-    node_write_file(x$node, file, options = options, encoding = encoding)
+    .Call(node_write_file, x$node, file, encoding, options)
   }
 }
 

@@ -107,7 +107,7 @@ read_xml.character <- function(x, encoding = "", ..., as_html = FALSE,
       read_xml.connection(con, encoding = encoding, ..., as_html = as_html,
         base_url = x, options = options)
     } else {
-      doc <- doc_parse_file(con, encoding = encoding, as_html = as_html,
+      doc <- .Call(doc_parse_file, con, encoding = encoding, as_html = as_html,
         options = options)
       xml_document(doc)
     }
@@ -120,7 +120,7 @@ read_xml.raw <- function(x, encoding = "", base_url = "", ...,
                          as_html = FALSE, options = "NOBLANKS") {
   options <- parse_options(options, xml_parse_options())
 
-  doc <- doc_parse_raw(x, encoding = encoding, base_url = base_url,
+  doc <- .Call(doc_parse_raw, x, encoding = encoding, base_url = base_url,
     as_html = as_html, options = options)
   xml_document(doc)
 }
@@ -137,7 +137,7 @@ read_xml.connection <- function(x, encoding = "", n = 64 * 1024,
     on.exit(close(x))
   }
 
-  raw <- read_connection_(x, n)
+  raw <- .Call(read_connection_, x, n)
   read_xml.raw(raw, encoding = encoding, base_url = base_url, as_html =
     as_html, options = options)
 }

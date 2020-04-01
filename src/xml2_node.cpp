@@ -1,17 +1,23 @@
-#include <Rcpp.h>
+#define R_NO_REMAP
+#include <Rinternals.h>
+#undef R_NO_REMAP
+
 #include <libxml/tree.h>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <string>
+#include <set>
 
-using namespace Rcpp;
 #include "xml2_types.h"
 #include "xml2_utils.h"
 
 template<typename T> // for xmlAttr and xmlNode
-std::string nodeName(T* node, CharacterVector nsMap) {
+std::string nodeName(T* node, SEXP nsMap) {
   std::string name = Xml2String(node->name).asStdString();
-  if (nsMap.size() == 0)
+  if (Rf_xlength(nsMap) == 0) {
     return name;
+  }
 
   xmlNs* ns = node->ns;
   if (ns == NULL)
@@ -21,21 +27,34 @@ std::string nodeName(T* node, CharacterVector nsMap) {
   return prefix + ":" + name;
 }
 
-// [[Rcpp::export]]
-CharacterVector node_name(XPtrNode node, CharacterVector nsMap) {
-  return asCharacterVector(nodeName(node.checked_get(), nsMap));
+// [[export]]
+extern "C" SEXP node_name(SEXP node_sxp, SEXP nsMap) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  std::string name = nodeName(node.checked_get(), nsMap);
+  return Rf_ScalarString(Rf_mkCharLenCE(name.c_str(), name.size(), CE_UTF8));
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_set_name(XPtrNode node, std::string value) {
-  return xmlNodeSetName(node, asXmlChar(value));
+// [[export]]
+extern "C" SEXP node_set_name(SEXP node_sxp, SEXP value) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  xmlNodeSetName(node, asXmlChar(value));
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-CharacterVector node_text(XPtrNode node) {
-  std::string text = Xml2String(xmlNodeGetContent(node.checked_get())).asStdString();
+// [[export]]
+extern "C" SEXP node_text(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
 
-  return asCharacterVector(text.c_str());
+  return Rf_ScalarString(Xml2String(xmlNodeGetContent(node.checked_get())).asRString());
+  END_CPP
 }
 
 bool hasPrefix(std::string lhs, std::string rhs) {
@@ -63,22 +82,34 @@ const xmlChar* xmlNsDefinition(xmlNodePtr node, const xmlChar* lookup) {
   return NULL;
 }
 
-// [[Rcpp::export]]
-SEXP node_attr(XPtrNode node, std::string name, CharacterVector missing,
-                 CharacterVector nsMap) {
-  if (missing.size() != 1)
-    Rcpp::stop("`missing` should be length 1");
-  SEXP missingVal = missing[0];
+// [[export]]
+extern "C" SEXP node_attr(
+    SEXP node_sxp,
+    SEXP name_sxp,
+    SEXP missing_sxp,
+    SEXP nsMap_sxp) {
+  BEGIN_CPP
+
+  XPtrNode node(node_sxp);
+  std::string name(CHAR(STRING_ELT(name_sxp, 0)));
+
+  if (Rf_xlength(missing_sxp) != 1) {
+    Rf_error("`missing` should be length 1");
+  }
+
+  SEXP missingVal = STRING_ELT(missing_sxp, 0);
 
   if (name == "xmlns") {
-    return CharacterVector(Xml2String(xmlNsDefinition(node, NULL)).asRString(missingVal));
+    return Rf_ScalarString(Xml2String(xmlNsDefinition(node, NULL)).asRString(missingVal));
   }
+
   if (hasPrefix("xmlns:", name)) {
     std::string prefix = name.substr(6);
-    return CharacterVector(Xml2String(xmlNsDefinition(node, asXmlChar(prefix))).asRString(missingVal));
+    return Rf_ScalarString(Xml2String(xmlNsDefinition(node, asXmlChar(prefix))).asRString(missingVal));
   }
+
   xmlChar* string;
-  if (nsMap.size() == 0) {
+  if (Rf_xlength(nsMap_sxp) == 0) {
     string = xmlGetProp(node.checked_get(), asXmlChar(name));
   } else {
     size_t colon = name.find(":");
@@ -92,17 +123,20 @@ SEXP node_attr(XPtrNode node, std::string name, CharacterVector missing,
         prefix = name.substr(0, colon),
                attr = name.substr(colon + 1, name.size() - 1);
 
-      std::string url = NsMap(nsMap).findUrl(prefix);
+      std::string url = NsMap(nsMap_sxp).findUrl(prefix);
 
       string = xmlGetNsProp(node.checked_get(), asXmlChar(attr), asXmlChar(url));
     }
   }
 
-  return CharacterVector(Xml2String(string).asRString(missingVal));
+  return Rf_ScalarString(Xml2String(string).asRString(missingVal));
+  END_CPP
 }
 
-// [[Rcpp::export]]
-CharacterVector node_attrs(XPtrNode node_, CharacterVector nsMap) {
+// [[export]]
+extern "C" SEXP node_attrs(SEXP node_sxp, SEXP nsMap_sxp) {
+  BEGIN_CPP
+  XPtrNode node_(node_sxp);
 
   int n = 0;
   xmlNodePtr node = node_.checked_get();
@@ -116,38 +150,44 @@ CharacterVector node_attrs(XPtrNode node_, CharacterVector nsMap) {
     for(xmlNsPtr cur = node->nsDef; cur != NULL; cur = cur->next)
       n++;
 
-    CharacterVector names(n), values(n);
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, n));
+    SEXP values = PROTECT(Rf_allocVector(STRSXP, n));
 
     int i = 0;
     for(xmlAttr* cur = node->properties; cur != NULL; cur = cur->next, ++i) {
-      names[i] = nodeName(cur, nsMap);
+      std::string name = nodeName(cur, nsMap_sxp);
+      SET_STRING_ELT(names, i, Rf_mkCharLenCE(name.c_str(), name.size(), CE_UTF8));
 
       xmlNs* ns = cur->ns;
       if (ns == NULL) {
-        if (nsMap.size() > 0) {
-          values[i] = Xml2String(xmlGetNoNsProp(node, cur->name)).asRString();
+        if (Rf_xlength(nsMap_sxp) > 0) {
+          SET_STRING_ELT(values, i, Xml2String(xmlGetNoNsProp(node, cur->name)).asRString());
         } else {
-          values[i] = Xml2String(xmlGetProp(node, cur->name)).asRString();
+          SET_STRING_ELT(values, i, Xml2String(xmlGetProp(node, cur->name)).asRString());
         }
       } else {
-        values[i] = Xml2String(xmlGetNsProp(node, cur->name, ns->href)).asRString();
+        SET_STRING_ELT(values, i, Xml2String(xmlGetNsProp(node, cur->name, ns->href)).asRString());
       }
     }
 
     for(xmlNsPtr cur = node->nsDef; cur != NULL; cur = cur->next, ++i) {
       if (cur->prefix == NULL) {
-        names[i] = "xmlns";
+        SET_STRING_ELT(names, i, Rf_mkChar("xmlns"));
       } else {
-        names[i] = "xmlns:" + Xml2String(cur->prefix).asStdString();
+        std::string name = std::string("xmlns:") + Xml2String(cur->prefix).asStdString();
+        SET_STRING_ELT(names,i, Rf_mkCharLenCE(name.c_str(), name.size(), CE_UTF8));
       }
-      values[i] = Xml2String(cur->href).asRString();
+      SET_STRING_ELT(values, i, Xml2String(cur->href).asRString());
     }
 
-    values.attr("names") = wrap<CharacterVector>(names);
+    Rf_setAttrib(values, R_NamesSymbol, names);
+
+    UNPROTECT(2);
     return values;
   }
 
-  return CharacterVector();
+  return Rf_allocVector(STRSXP, 0);
+  END_CPP
 }
 
 
@@ -284,23 +324,26 @@ void removeNs(xmlNodePtr node, const xmlChar* prefix) {
   return;
 }
 
-// [[Rcpp::export]]
-void node_set_attr(XPtrNode node_, std::string name, SEXP value, CharacterVector nsMap) {
+// [[export]]
+extern "C" SEXP node_set_attr(SEXP node_sxp, SEXP name_sxp, SEXP value, SEXP nsMap) {
+  BEGIN_CPP
+  XPtrNode node_(node_sxp);
+  std::string name(CHAR(STRING_ELT(name_sxp, 0)));
 
   const xmlNodePtr node = node_.checked_get();
 
   if (name == "xmlns") {
     xmlAddNamespace(node, xmlNewNs(node, asXmlChar(value), NULL));
-    return;
+    return R_NilValue;
   }
   if (hasPrefix("xmlns:", name)) {
     std::string prefix = name.substr(6);
     removeNs(node, asXmlChar(prefix));
     xmlAddNamespace(node, xmlNewNs(node, asXmlChar(value), asXmlChar(prefix)));
-    return;
+    return R_NilValue;
   }
 
-  if (nsMap.size() == 0) {
+  if (Rf_xlength(nsMap) == 0) {
       xmlSetProp(node, asXmlChar(name), asXmlChar(value));
   } else {
     size_t colon = name.find(":");
@@ -321,25 +364,29 @@ void node_set_attr(XPtrNode node_, std::string name, SEXP value, CharacterVector
     }
   }
 
-  return;
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_remove_attr(XPtrNode node_, std::string name, CharacterVector nsMap) {
+// [[export]]
+extern "C" SEXP node_remove_attr(SEXP node_sxp, SEXP name_sxp, SEXP nsMap) {
+  BEGIN_CPP
+  XPtrNode node_(node_sxp);
+  std::string name(CHAR(STRING_ELT(name_sxp, 0)));
 
   const xmlNodePtr node = node_.checked_get();
 
   if (name == "xmlns") {
     removeNs(node, NULL);
-    return;
+    return R_NilValue;
   }
   if (hasPrefix("xmlns:", name)) {
     std::string prefix = name.substr(6);
     removeNs(node, asXmlChar(prefix));
-    return;
+    return R_NilValue;
   }
 
-  if (nsMap.size() == 0) {
+  if (Rf_xlength(nsMap) == 0) {
       xmlUnsetProp(node, asXmlChar(name));
   } else {
     size_t colon = name.find(":");
@@ -360,54 +407,82 @@ void node_remove_attr(XPtrNode node_, std::string name, CharacterVector nsMap) {
     }
   }
 
-  return;
+  return R_NilValue;
+  END_CPP
 }
 
-List asList(std::vector<xmlNode*> nodes) {
-  List out(nodes.size());
-  for (size_t i = 0; i < nodes.size(); ++i)
-    out[i] = XPtrNode(nodes[i]);
+SEXP asList(std::vector<xmlNode*> nodes) {
+  SEXP out = PROTECT(Rf_allocVector(VECSXP, nodes.size()));
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    XPtrNode node(nodes[i]);
+    SET_VECTOR_ELT(out, i, SEXP(node));
+  }
+
+  UNPROTECT(1);
 
   return out;
 }
 
-// [[Rcpp::export]]
-Rcpp::List node_children(XPtrNode node, bool onlyNode = true) {
+// [[export]]
+extern "C" SEXP node_children(SEXP node_sxp, SEXP only_node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  bool only_node = LOGICAL(only_node_sxp)[0];
+
   std::vector<xmlNode*> out;
 
   for(xmlNode* cur = node->xmlChildrenNode; cur != NULL; cur = cur->next) {
-    if (onlyNode && cur->type != XML_ELEMENT_NODE)
+    if (only_node && cur->type != XML_ELEMENT_NODE) {
       continue;
+    }
+
     out.push_back(cur);
   }
 
   return asList(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-int node_length(XPtrNode node, bool onlyNode = true) {
+// [[export]]
+extern "C" SEXP node_length(SEXP node_sxp, SEXP only_node_sxp) {
+  BEGIN_CPP
+
+  XPtrNode node(node_sxp);
+  bool only_node = LOGICAL(only_node_sxp)[0];
+
   int i = 0;
   for(xmlNode* cur = node->xmlChildrenNode; cur != NULL; cur = cur->next) {
-    if (onlyNode && cur->type != XML_ELEMENT_NODE)
+    if (only_node && cur->type != XML_ELEMENT_NODE) {
       continue;
+    }
     ++i;
   }
 
-  return i;
+  return Rf_ScalarInteger(i);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-bool node_has_children(XPtrNode node, bool onlyNode = true) {
+// [[export]]
+extern "C" SEXP node_has_children(SEXP node_sxp, SEXP only_node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  bool only_node = LOGICAL(only_node_sxp)[0];
+
   for(xmlNode* cur = node->xmlChildrenNode; cur != NULL; cur = cur->next) {
-    if (onlyNode && cur->type != XML_ELEMENT_NODE)
+    if (only_node && cur->type != XML_ELEMENT_NODE) {
       continue;
-    return true;
+    }
+    return Rf_ScalarLogical(true);
   }
-  return false;
+  return Rf_ScalarLogical(false);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-Rcpp::List node_parents(XPtrNode node) {
+// [[export]]
+extern "C" SEXP node_parents(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
   std::vector<xmlNode*> out;
 
   for(xmlNode* cur = node->parent; cur != NULL; cur = cur->parent) {
@@ -417,176 +492,295 @@ Rcpp::List node_parents(XPtrNode node) {
   }
 
   return asList(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-Rcpp::List node_siblings(XPtrNode node, bool onlyNode = true) {
+// [[export]]
+extern "C" SEXP node_siblings(SEXP node_sxp, SEXP only_node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  bool only_node = LOGICAL(only_node_sxp)[0];
+
   std::vector<xmlNode*> out;
 
   xmlNode* parent = node->parent;
   if (parent == NULL)
-    return List();
+    return Rf_allocVector(VECSXP, 0);
 
   for(xmlNode* cur = parent->xmlChildrenNode; cur != NULL; cur = cur->next) {
-    if (cur == node)
+    if (cur == node) {
       continue;
-    if (onlyNode && cur->type != XML_ELEMENT_NODE)
+    }
+    if (only_node && cur->type != XML_ELEMENT_NODE) {
       continue;
+    }
 
     out.push_back(cur);
   }
 
   return asList(out);
+  END_CPP
 }
 
 
-// [[Rcpp::export]]
-XPtrNode node_parent(XPtrNode n) {
-  if (n->parent == NULL)
-    Rcpp::stop("Parent does not exist");
-  return XPtrNode(n->parent);
+// [[export]]
+extern "C" SEXP node_parent(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  if (node->parent == NULL) {
+    Rf_error("Parent does not exist");
+  }
+  XPtrNode out(node->parent);
+  return SEXP(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-std::string node_path(XPtrNode n) {
-  return Xml2String(xmlGetNodePath(n.checked_get())).asStdString();
+// [[export]]
+extern "C" SEXP node_path(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  return Rf_ScalarString(Xml2String(xmlGetNodePath(node.checked_get())).asRString());
+  END_CPP
 }
 
-// [[Rcpp::export]]
-LogicalVector nodes_duplicated(List nodes) {
+// [[export]]
+extern "C" SEXP nodes_duplicated(SEXP nodes) {
+  BEGIN_CPP
 
   std::set<xmlNode*> seen;
 
-  int n = nodes.size();
-  LogicalVector out(n);
+  int n = Rf_xlength(nodes);
+
+  SEXP out = PROTECT(Rf_allocVector(LGLSXP, n));
 
   for (int i = 0; i < n; ++i) {
     bool result;
-    if (RObject(nodes[i]).inherits("xml_node")) {
-      XPtrNode node = as<XPtrNode>(List(nodes[i])["node"]);
+    SEXP cur = VECTOR_ELT(nodes, i);
+    if (Rf_inherits(cur, "xml_node")) {
+      XPtrNode node(VECTOR_ELT(cur, 0));
       result = !seen.insert(node.checked_get()).second;
-    } else if (RObject(nodes[i]).inherits("xml_missing")){
+    } else if (Rf_inherits(cur, "xml_missing")) {
       result = false;
     } else {
-      XPtrNode node = nodes[i];
+      XPtrNode node(cur);
       result = !seen.insert(node.checked_get()).second;
     }
-    out[i] = result;
+    LOGICAL(out)[i] = result;
   }
 
+  UNPROTECT(1);
   return out;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-int node_type(XPtrNode node) {
-  return node->type;
+// [[export]]
+extern "C" SEXP node_type(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  return Rf_ScalarInteger(node->type);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_copy(XPtrNode node) {
-  return XPtrNode(xmlCopyNode(node.checked_get(), 1));
+// [[export]]
+extern "C" SEXP node_copy(SEXP node_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  XPtrNode copy(xmlCopyNode(node.checked_get(), 1));
+
+  return SEXP(copy);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_set_content(XPtrNode node, std::string content) {
-  return xmlNodeSetContentLen(node.checked_get(), asXmlChar(content), content.size());
+// [[export]]
+extern "C" SEXP node_set_content(SEXP node_sxp, SEXP content) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  xmlNodeSetContentLen(node.checked_get(), asXmlChar(content), Rf_xlength(STRING_ELT(content, 0)));
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_append_content(XPtrNode node, std::string content) {
-  return xmlNodeAddContentLen(node.checked_get(), asXmlChar(content), content.size());
+// [[export]]
+extern "C" SEXP node_append_content(SEXP node_sxp, SEXP content) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  xmlNodeAddContentLen(node.checked_get(), asXmlChar(content), Rf_xlength(STRING_ELT(content, 0)));
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_new_text(XPtrNode node, std::string content) {
-  xmlAddChild(node.checked_get(), xmlNewTextLen(asXmlChar(content), content.size()));
-  return;
+// [[export]]
+extern "C" SEXP node_new_text(SEXP node_sxp, SEXP content) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+
+  xmlAddChild(node.checked_get(), xmlNewTextLen(asXmlChar(content), Rf_xlength(STRING_ELT(content, 0))));
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_append_child(XPtrNode parent, XPtrNode cur) {
-  return XPtrNode(xmlAddChild(parent.checked_get(), cur.checked_get()));
+// [[export]]
+extern "C" SEXP node_append_child(SEXP parent_sxp, SEXP cur_sxp) {
+  BEGIN_CPP
+  XPtrNode parent(parent_sxp);
+  XPtrNode cur(cur_sxp);
+  XPtrNode out(xmlAddChild(parent.checked_get(), cur.checked_get()));
+  return SEXP(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_prepend_child(XPtrNode parent, XPtrNode cur) {
-  return XPtrNode(xmlAddPrevSibling(parent.checked_get()->children, cur.checked_get()));
+// [[export]]
+extern "C" SEXP node_prepend_child(SEXP parent_sxp, SEXP cur_sxp) {
+  BEGIN_CPP
+  XPtrNode parent(parent_sxp);
+  XPtrNode cur(cur_sxp);
+
+  XPtrNode out(xmlAddPrevSibling(parent.checked_get()->children, cur.checked_get()));
+
+  return SEXP(out);
+  END_CPP
 }
 
 // Previous sibling
-// [[Rcpp::export]]
-XPtrNode node_prepend_sibling(XPtrNode cur, XPtrNode elem) {
-  return XPtrNode(xmlAddPrevSibling(cur.checked_get(), elem.checked_get()));
+// [[export]]
+extern "C" SEXP node_prepend_sibling(SEXP cur_sxp, SEXP elem_sxp) {
+  BEGIN_CPP
+  XPtrNode cur(cur_sxp);
+  XPtrNode elem(elem_sxp);
+
+  XPtrNode out(xmlAddPrevSibling(cur.checked_get(), elem.checked_get()));
+
+  return SEXP(out);
+  END_CPP
 }
 
 // Append sibling
-// [[Rcpp::export]]
-XPtrNode node_append_sibling(XPtrNode cur, XPtrNode elem) {
-  return XPtrNode(xmlAddNextSibling(cur.checked_get(), elem.checked_get()));
+// [[export]]
+extern "C" SEXP node_append_sibling(SEXP cur_sxp, SEXP elem_sxp) {
+  BEGIN_CPP
+  XPtrNode cur(cur_sxp);
+  XPtrNode elem(elem_sxp);
+  XPtrNode out(xmlAddNextSibling(cur.checked_get(), elem.checked_get()));
+
+  return SEXP(out);
+  END_CPP
 }
 
 // Replace node
-// [[Rcpp::export]]
-XPtrNode node_replace(XPtrNode old, XPtrNode cur) {
-  return XPtrNode(xmlReplaceNode(old.checked_get(), cur.checked_get()));
+// [[export]]
+extern "C" SEXP node_replace(SEXP old_sxp, SEXP cur_sxp) {
+  BEGIN_CPP
+  XPtrNode old(old_sxp);
+  XPtrNode cur(cur_sxp);
+  XPtrNode out(xmlReplaceNode(old.checked_get(), cur.checked_get()));
+
+  return SEXP(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_remove(XPtrNode cur, bool free) {
-  xmlUnlinkNode(cur.checked_get());
+// [[export]]
+extern "C" SEXP node_remove(SEXP node_sxp, SEXP free_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  bool free = LOGICAL(free_sxp)[0];
+
+  xmlUnlinkNode(node.checked_get());
   if (free) {
-    xmlFreeNode(cur.checked_get());
+    xmlFreeNode(node.checked_get());
   }
-  return;
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_new(std::string name) {
-  return XPtrNode(xmlNewNode(NULL, asXmlChar(name)));
+// [[export]]
+extern "C" SEXP node_new(SEXP name) {
+  BEGIN_CPP
+  XPtrNode node(xmlNewNode(NULL, asXmlChar(name)));
+  return SEXP(node);
+  END_CPP
 }
 
 
-// [[Rcpp::export]]
-XPtrNode node_cdata_new(XPtrDoc doc, std::string content) {
-  return XPtrNode(xmlNewCDataBlock(doc.checked_get(), asXmlChar(content), content.length()));
+// [[export]]
+extern "C" SEXP node_cdata_new(SEXP doc_sxp, SEXP content_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  XPtrNode node(xmlNewCDataBlock(doc.checked_get(), asXmlChar(content_sxp), Rf_xlength(STRING_ELT(content_sxp, 0))));
+  return SEXP(node);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_comment_new(std::string content) {
-  return XPtrNode(xmlNewComment(asXmlChar(content)));
+// [[export]]
+extern "C" SEXP node_comment_new(SEXP content) {
+  BEGIN_CPP
+  XPtrNode node(xmlNewComment(asXmlChar(content)));
+  return SEXP(node);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_new_ns(std::string name, XPtrNs ns) {
-  return XPtrNode(xmlNewNode(ns.checked_get(), asXmlChar(name)));
+// [[export]]
+extern "C" SEXP node_new_ns(SEXP name, SEXP ns_sxp) {
+  BEGIN_CPP
+  XPtrNs ns(ns_sxp);
+  XPtrNode node(xmlNewNode(ns.checked_get(), asXmlChar(name)));
+  return SEXP(node);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode node_null() {
-  return XPtrNode(xmlNodePtr(NULL));
-}
+// [[export]]
+extern "C" SEXP node_set_namespace_uri(SEXP doc_sxp, SEXP node_sxp, SEXP uri) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  XPtrNode node(node_sxp);
 
-// [[Rcpp::export]]
-void node_set_namespace_uri(XPtrDoc doc, XPtrNode node, std::string uri) {
   xmlNsPtr ns = xmlSearchNsByHref(doc.checked_get(), node.checked_get(), asXmlChar(uri));
 
   xmlSetNs(node.checked_get(), ns);
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_set_namespace_prefix(XPtrDoc doc, XPtrNode node, std::string prefix) {
+// [[export]]
+extern "C" SEXP node_set_namespace_prefix(SEXP doc_sxp, SEXP node_sxp, SEXP prefix_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  XPtrNode node(node_sxp);
+
   xmlNsPtr ns = NULL;
-  if (prefix.length() == 0) {
+  if (Rf_xlength(STRING_ELT(prefix_sxp, 0)) == 0) {
     ns = xmlSearchNs(doc.checked_get(), node.checked_get(), NULL);
   } else {
-    ns = xmlSearchNs(doc.checked_get(), node.checked_get(), asXmlChar(prefix));
+    ns = xmlSearchNs(doc.checked_get(), node.checked_get(), asXmlChar(prefix_sxp));
   }
 
   xmlSetNs(node.checked_get(), ns);
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_new_dtd(XPtrDoc doc, std::string name = "", std::string eid = "", std::string sid = "") {
+// [[export]]
+extern "C" SEXP node_new_dtd(SEXP doc_sxp, SEXP name_sxp, SEXP eid_sxp, SEXP sid_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  std::string name(CHAR(STRING_ELT(name_sxp, 0)));
+  std::string eid(CHAR(STRING_ELT(eid_sxp, 0)));
+  std::string sid(CHAR(STRING_ELT(sid_sxp, 0)));
+
   xmlDtdPtr dtd = xmlNewDtd(doc, name == "" ? NULL : asXmlChar(name), eid == "" ? NULL : asXmlChar(eid), sid == "" ? NULL : asXmlChar(sid));
   xmlAddChild(reinterpret_cast<xmlNodePtr>(doc.checked_get()), reinterpret_cast<xmlNodePtr>(dtd));
+
+  return R_NilValue;
+  END_CPP
 }

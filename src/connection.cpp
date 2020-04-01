@@ -1,37 +1,53 @@
-#include <Rcpp.h>
-using namespace Rcpp;
+#include <Rinternals.h>
+#include <vector>
+#include "xml2_utils.h"
 
 // Wrapper around R's read_bin function
-RawVector read_bin(RObject con, int bytes = 64 * 1024) {
-  Rcpp::Environment baseEnv = Rcpp::Environment::base_env();
-  Rcpp::Function readBin = baseEnv["readBin"];
+SEXP read_bin(SEXP con, size_t bytes) {
+  SEXP e;
+  SEXP raw_sxp = PROTECT(Rf_mkString("raw"));
+  SEXP bytes_sxp = PROTECT(Rf_ScalarInteger(bytes));
+  PROTECT(e = Rf_lang4(Rf_install("readBin"), con, raw_sxp, bytes_sxp));
+  SEXP res = Rf_eval(e, R_GlobalEnv);
+  UNPROTECT(3);
+  return res;
+}
 
-  RawVector out = Rcpp::as<RawVector>(readBin(con, "raw", bytes));
-  return out;
+// Wrapper around R's write_bin function
+SEXP write_bin(SEXP data, SEXP con) {
+  SEXP e;
+  PROTECT(e = Rf_lang3(Rf_install("writeBin"), data, con));
+  SEXP res = Rf_eval(e, R_GlobalEnv);
+  UNPROTECT(1);
+  return res;
 }
 
 // Read data from a connection in chunks and then combine into a single
 // raw vector.
 //
-// [[Rcpp::export]]
-RawVector read_connection_(RObject con, int chunk_size = 64 * 1024) {
-  std::vector<RawVector> chunks;
+// [[export]]
+extern "C" SEXP read_connection_(SEXP con_sxp, SEXP read_size_sxp) {
 
-  RawVector chunk;
-  while((chunk = read_bin(con, chunk_size)).size() > 0)
-    chunks.push_back(chunk);
+  BEGIN_CPP
+  std::vector<char> buffer;
+  size_t read_size = REAL(read_size_sxp)[0];
 
-  size_t size = 0;
-  for (size_t i = 0; i < chunks.size(); ++i)
-    size += chunks[i].size();
-
-  RawVector out(size);
-  size_t pos = 0;
-  for (size_t i = 0; i < chunks.size(); ++i) {
-    memcpy(RAW(out) + pos, RAW(chunks[i]), chunks[i].size());
-    pos += chunks[i].size();
+  SEXP chunk = read_bin(con_sxp, read_size);
+  R_xlen_t chunk_size = Rf_xlength(chunk);
+  while(chunk_size > 0) {
+    std::copy(RAW(chunk), RAW(chunk) + chunk_size, std::back_inserter(buffer));
+    chunk = read_bin(con_sxp, read_size);
+    chunk_size = Rf_xlength(chunk);
   }
 
-  return out;
-}
+  size_t size = buffer.size();
 
+  SEXP out = PROTECT(Rf_allocVector(RAWSXP, size));
+  std::copy(buffer.begin(), buffer.end(), RAW(out));
+
+  UNPROTECT(1);
+
+  return out;
+
+  END_CPP
+}

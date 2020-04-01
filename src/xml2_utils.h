@@ -1,9 +1,10 @@
 #ifndef __XML2_XML_UTILS__
 #define __XML2_XML_UTILS__
 
-#include <Rcpp.h>
+#include <Rinternals.h>
 #include <libxml/tree.h>
 #include <map>
+#include <string>
 
 inline const xmlChar* asXmlChar(std::string const& x) {
   return (const xmlChar*) x.c_str();
@@ -13,14 +14,19 @@ inline const xmlChar* asXmlChar(SEXP x, int n = 0) {
   return (const xmlChar*) CHAR(STRING_ELT(x, n));
 }
 
+#define BEGIN_CPP try {
+
+#define END_CPP                                                                \
+  }                                                                            \
+  catch (std::exception & e) {                                                 \
+    Rf_error("C++ exception: %s", e.what());                                   \
+  }
+
+
 // If we are using C++11 disallow moves
 #if __cplusplus >= 201103L
 void asXmlChar(std::string&&) = delete;
 #endif
-
-inline Rcpp::CharacterVector asCharacterVector(std::string x) {
-  return Rcpp::CharacterVector(Rf_mkCharCE(x.c_str(), CE_UTF8));
-}
 
 // ----------------------------------------------------------------------------
 // A wrapper around xmlChar* that frees memory if necessary
@@ -75,11 +81,11 @@ class NsMap {
   NsMap() {
   }
 
-  // Initialise from an existing character vector
-  NsMap(Rcpp::CharacterVector x) {
-    Rcpp::CharacterVector names = Rcpp::as<Rcpp::CharacterVector>(x.attr("names"));
-    for (R_len_t i = 0; i < x.size(); ++i) {
-      add(std::string(names[i]), std::string(x[i]));
+  // Initialise from an existing STRSXP
+  NsMap(SEXP x) {
+    SEXP names = Rf_getAttrib(x, R_NamesSymbol);
+    for (R_len_t i = 0; i < Rf_xlength(x); ++i) {
+      add(std::string(CHAR(STRING_ELT(names, i))), std::string(CHAR(STRING_ELT(x, i))));
     }
   }
 
@@ -93,7 +99,7 @@ class NsMap {
       return it->second;
     }
 
-    Rcpp::stop("Couldn't find url for prefix %s", prefix);
+    Rf_error("Couldn't find url for prefix %s", prefix.c_str());
     return std::string();
   }
 
@@ -104,7 +110,7 @@ class NsMap {
       }
     }
 
-    Rcpp::stop("Couldn't find prefix for url %s", url);
+    Rf_error("Couldn't find prefix for url %s", url.c_str());
     return std::string();
   }
 
@@ -117,8 +123,21 @@ class NsMap {
     return true;
   }
 
-  Rcpp::CharacterVector out() {
-    return Rcpp::wrap(prefix2url);
+  SEXP out() {
+    SEXP out = PROTECT(Rf_allocVector(STRSXP, prefix2url.size()));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, prefix2url.size()));
+
+    size_t i = 0;
+    for (prefix2url_t::const_iterator it = prefix2url.begin(); it != prefix2url.end(); ++it) {
+      SET_STRING_ELT(out, i, Rf_mkChar(it->second.c_str()));
+      SET_STRING_ELT(names, i, Rf_mkChar(it->first.c_str()));
+      ++i;
+    }
+
+    Rf_setAttrib(out, R_NamesSymbol, names);
+
+    UNPROTECT(2);
+    return out;
   }
 };
 #endif

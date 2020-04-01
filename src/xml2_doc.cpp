@@ -1,13 +1,13 @@
-#include <Rcpp.h>
-using namespace Rcpp;
+#include <Rinternals.h>
 
 #include <libxml/parser.h>
 #include <libxml/HTMLparser.h>
 #include "xml2_types.h"
 #include "xml2_utils.h"
+#include <cstring>
 
-// [[Rcpp::export]]
-Rcpp::IntegerVector xml_parse_options() {
+// [[export]]
+extern "C" SEXP  xml_parse_options_() {
 
 #if defined(LIBXML_VERSION) && (LIBXML_VERSION >= 20700)
 #define HAS_OLD10
@@ -154,16 +154,20 @@ Rcpp::IntegerVector xml_parse_options() {
 
   size_t size = sizeof(values) / sizeof(values[0]);
 
-  Rcpp::IntegerVector out_values = Rcpp::IntegerVector(size);
-  Rcpp::CharacterVector out_names = Rcpp::CharacterVector(size);
-  Rcpp::CharacterVector out_descriptions = Rcpp::CharacterVector(size);
+  SEXP out_values = PROTECT(Rf_allocVector(INTSXP, size));
+  SEXP out_names = PROTECT(Rf_allocVector(STRSXP, size));
+  SEXP out_descriptions = PROTECT(Rf_allocVector(STRSXP, size));
+
   for (size_t i = 0; i < size; ++i) {
-    out_values[i] = values[i];
-    out_names[i] = names[i];
-    out_descriptions[i] = descriptions[i];
+    INTEGER(out_values)[i] = values[i];
+    SET_STRING_ELT(out_names, i, Rf_mkChar(names[i]));
+    SET_STRING_ELT(out_descriptions, i, Rf_mkChar(descriptions[i]));
   }
-  out_values.attr("names") = out_names;
-  out_values.attr("descriptions") = out_descriptions;
+
+  Rf_setAttrib(out_values, R_NamesSymbol, out_names);
+  Rf_setAttrib(out_values, Rf_install("descriptions"), out_descriptions);
+
+  UNPROTECT(3);
 
   return out_values;
 
@@ -175,37 +179,53 @@ Rcpp::IntegerVector xml_parse_options() {
 #undef HAS_IGNORE_ENC
 }
 
-// [[Rcpp::export]]
-XPtrDoc doc_parse_file(std::string path,
-                            std::string encoding = "",
-                            bool as_html = false,
-                            int options = 0) {
+// [[export]]
+extern "C" SEXP doc_parse_file(
+    SEXP path_sxp,
+    SEXP encoding_sxp,
+    SEXP as_html_sxp,
+    SEXP options_sxp) {
+
+  const char* path = CHAR(STRING_ELT(path_sxp, 0));
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  bool as_html = LOGICAL(as_html_sxp)[0];
+  int options = INTEGER(options_sxp)[0];
   xmlDoc* pDoc;
   if (as_html) {
     pDoc = htmlReadFile(
-      path.c_str(),
-      encoding == "" ? NULL : encoding.c_str(),
+      path,
+      strncmp(encoding, "", 0) == 0 ? NULL : encoding,
       options
     );
   } else {
     pDoc = xmlReadFile(
-      path.c_str(),
-      encoding == "" ? NULL : encoding.c_str(),
+      path,
+      strncmp(encoding, "", 0) == 0 ? NULL : encoding,
       options
     );
   }
 
-  if (pDoc == NULL)
-    Rcpp::stop("Failed to parse %s", path);
+  if (pDoc == NULL) {
+    Rf_error("Failed to parse %s", path);
+  }
 
-  return XPtrDoc(pDoc);
+  return SEXP(XPtrDoc(pDoc));
 }
 
-// [[Rcpp::export]]
-XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
-                      std::string base_url = "",
-                      bool as_html = false,
-                      int options = 0) {
+// [[export]]
+extern "C" SEXP doc_parse_raw(
+    SEXP x,
+    SEXP encoding_sxp,
+    SEXP base_url_sxp,
+    SEXP as_html_sxp,
+    SEXP options_sxp) {
+
+  BEGIN_CPP
+  std::string encoding(CHAR(STRING_ELT(encoding_sxp, 0)));
+  std::string base_url(CHAR(STRING_ELT(encoding_sxp, 0)));
+  bool as_html = LOGICAL(as_html_sxp)[0];
+  int options = INTEGER(options_sxp)[0];
+
   xmlDoc* pDoc;
   if (as_html) {
     pDoc = htmlReadMemory(
@@ -225,42 +245,76 @@ XPtrDoc doc_parse_raw(RawVector x, std::string encoding,
     );
   }
 
-  if (pDoc == NULL)
-    Rcpp::stop("Failed to parse text");
+  if (pDoc == NULL) {
+    Rf_error("Failed to parse text");
+  }
 
-  return XPtrDoc(pDoc);
+  return SEXP(XPtrDoc(pDoc));
+
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode doc_root(XPtrDoc x) {
-  return XPtrNode(xmlDocGetRootElement(x.checked_get()));
+// [[export]]
+extern "C" SEXP doc_root(SEXP x) {
+  BEGIN_CPP
+  XPtrDoc doc(x);
+  XPtrNode node(xmlDocGetRootElement(doc.checked_get()));
+  return SEXP(node);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-bool doc_has_root(XPtrDoc x) {
-  return xmlDocGetRootElement(x.get()) != NULL;
+// [[export]]
+extern "C" SEXP doc_has_root(SEXP x_sxp) {
+  BEGIN_CPP
+  XPtrDoc x(x_sxp);
+  return Rf_ScalarLogical(xmlDocGetRootElement(x.get()) != NULL);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-CharacterVector doc_url(XPtrDoc x) {
-  SEXP string = (x->URL == NULL) ? NA_STRING : Rf_mkCharCE((const char*) x->URL, CE_UTF8);
-  return CharacterVector(string);
+// [[export]]
+extern "C" SEXP  doc_url(SEXP doc_sxp) {
+  BEGIN_CPP
+
+  XPtrDoc doc(doc_sxp);
+  if (doc->URL == NULL) {
+    return NA_STRING;
+  }
+
+  SEXP out = PROTECT(Rf_allocVector(STRSXP, 1));
+  SET_STRING_ELT(out, 0, Rf_mkCharCE((const char*) doc->URL, CE_UTF8));
+  UNPROTECT(1);
+
+  return out;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrDoc doc_new(std::string version, std::string encoding = "UTF-8") {
-  XPtrDoc x = XPtrDoc(xmlNewDoc(asXmlChar(version)));
-  xmlCharEncodingHandlerPtr p = xmlFindCharEncodingHandler(encoding.c_str());
+// [[export]]
+extern "C" SEXP  doc_new(SEXP version_sxp, SEXP encoding_sxp) {
+
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+
+  BEGIN_CPP
+  XPtrDoc x(xmlNewDoc(asXmlChar(version_sxp)));
+  xmlCharEncodingHandlerPtr p = xmlFindCharEncodingHandler(encoding);
   x->encoding = xmlStrdup(reinterpret_cast<const xmlChar *>(p->name));
-  return x;
+  return SEXP(x);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-XPtrNode doc_set_root(XPtrDoc doc, XPtrNode root) {
-  return XPtrNode(xmlDocSetRootElement(doc, root));
+// [[export]]
+extern "C" SEXP doc_set_root(SEXP doc_sxp, SEXP root_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  XPtrNode root(root_sxp);
+  XPtrNode out(xmlDocSetRootElement(doc, root));
+  return SEXP(out);
+  END_CPP
 }
 
-// [[Rcpp::export]]
-bool doc_is_html(XPtrDoc doc) {
-  return (doc->properties & XML_DOC_HTML);
+// [[export]]
+extern "C" SEXP doc_is_html(SEXP doc_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  return Rf_ScalarLogical(doc->properties & XML_DOC_HTML);
+  END_CPP
 }

@@ -1,6 +1,5 @@
-#include <Rcpp.h>
+#include <Rinternals.h>
 #include "connection.h"
-using namespace Rcpp;
 
 #include <libxml/tree.h>
 #include <libxml/HTMLtree.h>
@@ -36,62 +35,94 @@ using namespace Rcpp;
 #define HAS_SAVE_WSNONSIG
 #endif
 
-// [[Rcpp::export]]
-Rcpp::IntegerVector xml_save_options() {
-  Rcpp::IntegerVector out = Rcpp::IntegerVector::create(
-      Rcpp::_["format"] = XML_SAVE_FORMAT,
-      Rcpp::_["no_declaration"] = XML_SAVE_NO_DECL,
-      Rcpp::_["no_empty_tags"] = XML_SAVE_NO_EMPTY
+typedef struct {
+  const char* name;
+  const char* description;
+  int value;
+} xml_save_def;
+
+// [[export]]
+extern "C" SEXP xml_save_options_() {
+
+  static const xml_save_def entries[] = {
+    {"format", "Format output", XML_SAVE_FORMAT},
+    {"no_declaration", "Drop the XML declaration", XML_SAVE_NO_DECL},
+    {"no_empty_tags", "Remove empty tags", XML_SAVE_NO_EMPTY},
 #ifdef HAS_SAVE_HTML
-      , Rcpp::_["no_xhtml"] = XML_SAVE_NO_XHTML
-      , Rcpp::_["require_xhtml"] = XML_SAVE_XHTML
-      , Rcpp::_["as_xml"] = XML_SAVE_AS_XML
-      , Rcpp::_["as_html"] = XML_SAVE_AS_HTML
+    {"no_xhtml", "Disable XHTML1 rules", XML_SAVE_NO_XHTML},
+    {"require_xhtml", "Force XHTML rules", XML_SAVE_XHTML},
+    {"as_xml", "Force XML output", XML_SAVE_AS_XML},
+    {"as_html", "Force HTML output", XML_SAVE_AS_HTML},
 #endif
 #ifdef HAS_SAVE_WSNONSIG
-      , Rcpp::_["format_whitespace"] = XML_SAVE_WSNONSIG
+    {"format_whitespace", "Format with non-significant whitespace", XML_SAVE_WSNONSIG},
 #endif
-      );
-  out.attr("descriptions") = Rcpp::CharacterVector::create(
-      "Format output",
-      "Drop the XML declaration",
-      "Remove empty tags"
-#ifdef HAS_SAVE_HTML
-      , "Disable XHTML1 rules"
-      , "Force XHTML1 rules"
-      , "Force XML output"
-      , "Force HTML output"
-#endif
-#ifdef HAS_SAVE_WSNONSIG
-      , "Format with non-significant whitespace"
-#endif
-      );
-  return out;
+    {NULL, NULL, 0}
+  };
+
+  // First figure out size, seems like there would be a way for the compiler to
+  // do this, but I don't know it.
+  R_xlen_t n = 0;
+  while(entries[n].name != NULL) {
+    ++n;
+  }
+
+  SEXP names = PROTECT(Rf_allocVector(STRSXP, n));
+  SEXP descriptions = PROTECT(Rf_allocVector(STRSXP, n));
+  SEXP values = PROTECT(Rf_allocVector(INTSXP, n));
+
+
+  for (R_xlen_t i = 0;i < n; ++i) {
+    SET_STRING_ELT(names, i, Rf_mkChar(entries[i].name));
+    SET_STRING_ELT(descriptions, i, Rf_mkChar(entries[i].description));
+    INTEGER(values)[i] = entries[i].value;
+  }
+
+  Rf_setAttrib(values, R_NamesSymbol, names);
+  Rf_setAttrib(values, Rf_install("descriptions"), descriptions);
+
+  UNPROTECT(3);
+
+  return values;
 }
 
 int xml_write_callback(SEXP con, const char * buffer, int len) {
   size_t write_size;
 
   if ((write_size = R_WriteConnection(con, (void *) buffer, len)) != static_cast<size_t>(len)) {
-    stop("write failed, expected %l, got %l", len, write_size);
+    Rf_error("write failed, expected %l, got %l", len, write_size);
   }
   return write_size;
 }
 
-// [[Rcpp::export]]
-void doc_write_file(XPtrDoc x, std::string path, std::string encoding = "UTF-8", int options = 1) {
+// [[export]]
+extern "C" SEXP doc_write_file(SEXP doc_sxp, SEXP path_sxp, SEXP encoding_sxp, SEXP options_sxp) {
+
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  const char* path = CHAR(STRING_ELT(path_sxp, 0));
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
+
   xmlSaveCtxtPtr savectx = xmlSaveToFilename(
-      path.c_str(),
-      encoding.c_str(),
+      path,
+      encoding,
       options);
-  xmlSaveDoc(savectx, x.checked_get());
+  xmlSaveDoc(savectx, doc.checked_get());
   if (xmlSaveClose(savectx) == -1) {
-    stop("Error closing file");
+    Rf_error("Error closing file");
   }
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void doc_write_connection(XPtrDoc x, SEXP connection, std::string encoding = "UTF-8", int options = 1) {
+// [[export]]
+extern "C" SEXP doc_write_connection(SEXP doc_sxp, SEXP connection, SEXP encoding_sxp, SEXP options_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
 
   SEXP con = R_GetConnection(connection);
 
@@ -99,79 +130,116 @@ void doc_write_connection(XPtrDoc x, SEXP connection, std::string encoding = "UT
       reinterpret_cast<xmlOutputWriteCallback>(xml_write_callback),
       NULL,
       con,
-      encoding.c_str(),
+      encoding,
       options);
 
-  xmlSaveDoc(savectx, x.checked_get());
+  xmlSaveDoc(savectx, doc.checked_get());
   if (xmlSaveClose(savectx) == -1) {
-    stop("Error closing connection");
+    Rf_error("Error closing connection");
   }
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-CharacterVector doc_write_character(XPtrDoc x, std::string encoding = "UTF-8", int options = 1) {
+// [[export]]
+extern "C" SEXP doc_write_character(SEXP doc_sxp, SEXP encoding_sxp, SEXP options_sxp) {
+  BEGIN_CPP
+  XPtrDoc doc(doc_sxp);
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
+
   xmlBufferPtr buffer = xmlBufferCreate();
 
   xmlSaveCtxtPtr savectx = xmlSaveToBuffer(
       buffer,
-      encoding.c_str(),
+      encoding,
       options);
 
-  xmlSaveDoc(savectx, x.checked_get());
+  xmlSaveDoc(savectx, doc.checked_get());
   if (xmlSaveClose(savectx) == -1) {
     xmlFree(buffer);
-    stop("Error writing to buffer");
+    Rf_error("Error writing to buffer");
   }
-  CharacterVector out(Xml2String(buffer->content).asRString());
+  SEXP out = PROTECT(Rf_allocVector(STRSXP, 1));
+  SET_STRING_ELT(out, 0, Xml2String(buffer->content).asRString());
+
   xmlFree(buffer);
+
+  UNPROTECT(1);
+
   return out;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_write_file(XPtrNode x, std::string path, std::string encoding = "UTF-8", int options = 1) {
+// [[export]]
+extern "C" SEXP node_write_file(SEXP node_sxp, SEXP path_sxp, SEXP encoding_sxp, SEXP options_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  const char* path = CHAR(STRING_ELT(path_sxp, 0));
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
+
   xmlSaveCtxtPtr savectx = xmlSaveToFilename(
-      path.c_str(),
-      encoding.c_str(),
+      path,
+      encoding,
       options);
-  xmlSaveTree(savectx, x.checked_get());
+  xmlSaveTree(savectx, node.checked_get());
   if (xmlSaveClose(savectx) == -1) {
-    stop("Error closing file");
+    Rf_error("Error closing file");
   }
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-void node_write_connection(XPtrNode x, SEXP connection, std::string encoding = "UTF-8", int options = 1) {
-
+// [[export]]
+extern "C" SEXP node_write_connection(SEXP node_sxp, SEXP connection, SEXP encoding_sxp, SEXP options_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
   SEXP con = R_GetConnection(connection);
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
 
   xmlSaveCtxtPtr savectx = xmlSaveToIO(
       (xmlOutputWriteCallback)xml_write_callback,
       NULL,
       con,
-      encoding.c_str(),
+      encoding,
       options);
 
-  xmlSaveTree(savectx, x.checked_get());
+  xmlSaveTree(savectx, node.checked_get());
   if (xmlSaveClose(savectx) == -1) {
-    stop("Error closing connection");
+    Rf_error("Error closing connection");
   }
+
+  return R_NilValue;
+  END_CPP
 }
 
-// [[Rcpp::export]]
-CharacterVector node_write_character(XPtrNode x, std::string encoding = "UTF-8", int options = 1) {
+// [[export]]
+extern "C" SEXP node_write_character(SEXP node_sxp, SEXP encoding_sxp, SEXP options_sxp) {
+  BEGIN_CPP
+  XPtrNode node(node_sxp);
+  const char* encoding = CHAR(STRING_ELT(encoding_sxp, 0));
+  int options = INTEGER(options_sxp)[0];
+
   xmlBufferPtr buffer = xmlBufferCreate();
 
   xmlSaveCtxtPtr savectx = xmlSaveToBuffer(
       buffer,
-      encoding.c_str(),
+      encoding,
       options);
 
-  xmlSaveTree(savectx, x.checked_get());
+  xmlSaveTree(savectx, node.checked_get());
   if (xmlSaveClose(savectx) == -1) {
     xmlFree(buffer);
-    stop("Error writing to buffer");
+    Rf_error("Error writing to buffer");
   }
-  CharacterVector out(Xml2String(buffer->content).asRString());
+  SEXP out = PROTECT(Rf_ScalarString(Xml2String(buffer->content).asRString()));
   xmlFree(buffer);
+
+  UNPROTECT(1);
   return out;
+  END_CPP
 }
