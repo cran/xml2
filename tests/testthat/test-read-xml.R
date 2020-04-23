@@ -69,6 +69,11 @@ test_that("read_html works with httr response objects", {
   expect_equal(length(xml_find_all(x, "//slide")), 2)
 })
 
+test_that("read_xml works with raw inputs", {
+  x <- read_xml("<foo/>")
+  expect_equal(xml_url(x), NA_character_)
+})
+
 test_that("read_xml and read_html fail for bad status codes", {
 
   skip_on_cran()
@@ -97,3 +102,7 @@ test_that("read_html works with non-ASCII encodings", {
     "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\" \"http://www.w3.org/TR/REC-html40/loose.dtd\">\n<html><body>\U2019</body></html>\n")
 })
 
+test_that("read_xml and read_html fail with > 1 input", {
+  expect_error(read_xml(c("foo", "bar")), "`x` must be a string of length 1")
+  expect_error(read_html(c("foo", "bar")), "`x` must be a string of length 1")
+})
