@@ -2,8 +2,8 @@ context("write_xml")
 
 test_that("write_xml errors for incorrect directory and with invalid inputs", {
   x <- read_xml("<x/>")
-  filename <- ".../test.xml"
-  expect_error(write_xml(x, filename), "'...' does not exist in current working directory")
+  filename <- "does_not_exist/test.xml"
+  expect_error(write_xml(x, filename), "'does_not_exist' does not exist in current working directory")
 
 
   expect_error(write_xml(x, c("test.xml", "foo")), "`file` must be a non-zero character of length 1")
@@ -109,4 +109,15 @@ test_that("write_html work with html input", {
   on.exit({unlink(filename); close(file)})
   expect_identical(readChar(file, 1000L),
     "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\" \"http://www.w3.org/TR/REC-html40/loose.dtd\">\n<html><head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n<title>Foo</title>\n</head></html>\n")
+})
+
+test_that("write_xml returns invisibly", {
+  x <- read_xml("<x>foo</x>")
+  tf <- tempfile()
+  on.exit(unlink(tf))
+
+  res <- withVisible(write_xml(x, tf))
+
+  expect_equal(res$value, NULL)
+  expect_equal(res$visible, FALSE)
 })
