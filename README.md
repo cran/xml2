@@ -1,6 +1,7 @@
 # xml2
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/r-lib/xml2/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/r-lib/xml2/actions/workflows/R-CMD-check.yaml)
 [![R build status](https://github.com/r-lib/xml2/workflows/R-CMD-check/badge.svg)](https://github.com/r-lib/xml2/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/r-lib/xml2/master.svg)](https://codecov.io/github/r-lib/xml2?branch=master)
 <!-- badges: end -->
@@ -58,7 +59,7 @@ xml2 has similar goals to the XML package. The main differences are:
   free the memory used by an XML document as soon as the last reference
   to it goes away.
 
-* xml2 has a very simple class hierarchy so don't need to think about exactly 
+* xml2 has a very simple class hierarchy so you don't need to think about exactly 
   what type of object you have, xml2 will just do the right thing.
 
 * More convenient handling of namespaces in Xpath expressions - see `xml_ns()` 
