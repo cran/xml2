@@ -60,25 +60,7 @@
 #' xml_attrs(doc) <- c("b:id" = "one", "f:id" = "two", "id" = "three")
 #' xml_set_attrs(doc, c("b:id" = "one", "f:id" = "two", "id" = "three"))
 xml_attr <- function(x, attr, ns = character(), default = NA_character_) {
-  UseMethod("xml_attr")
-}
-
-#' @export
-xml_attr.xml_missing <- function(x, attr, ns = character(), default = NA_character_) {
-  default
-}
-
-#' @export
-xml_attr.xml_node <- function(x, attr, ns = character(),
-                              default = NA_character_) {
-  .Call(node_attr, x$node, attr, as.character(default), ns)
-}
-
-#' @export
-xml_attr.xml_nodeset <- function(x, attr,  ns = character(),
-                                 default = NA_character_) {
-  vapply(x, xml_attr, attr = attr, default = default, ns = ns,
-    FUN.VALUE = character(1))
+  .Call(node_attr, x, attr, as.character(default), ns)
 }
 
 #' @export
@@ -90,22 +72,7 @@ xml_has_attr <- function(x, attr, ns = character()) {
 #' @export
 #' @rdname xml_attr
 xml_attrs <- function(x, ns = character()) {
-  UseMethod("xml_attrs")
-}
-
-#' @export
-xml_attrs.xml_missing <- function(x, ns = character()) {
-  NA_character_
-}
-
-#' @export
-xml_attrs.xml_node <- function(x, ns = character()) {
-  .Call(node_attrs, x$node, nsMap = ns)
-}
-
-#' @export
-xml_attrs.xml_nodeset <- function(x, ns = character()) {
-  lapply(x, xml_attrs, ns = ns)
+  .Call(node_attrs, x, nsMap = ns)
 }
 
 #' @param value character vector of new value.
@@ -175,7 +142,7 @@ xml_set_attr.xml_missing <- set_attr_fun
 #' @export
 `xml_attrs<-.xml_node` <- function(x, ns = character(), value) {
   if (!is_named(value)) {
-    stop("`value` must be a named character vector or `NULL`", call. = FALSE)
+    cli::cli_abort("{.arg value} must be a named character vector or `NULL`")
   }
 
   attrs <- names(value)
@@ -191,7 +158,7 @@ xml_set_attr.xml_missing <- set_attr_fun
 
   # replace existing attributes and add new ones
   Map(function(attr, val) {
-      xml_attr(x, attr, ns) <- val
+    xml_attr(x, attr, ns) <- val
   }, attr = c(existing, new), value[c(existing, new)])
 
 
@@ -209,13 +176,13 @@ xml_set_attr.xml_missing <- set_attr_fun
     return(x)
   }
   if (!is.list(ns)) {
-     ns <- list(ns)
+    ns <- list(ns)
   }
   if (!is.list(value)) {
-     value <- list(value)
+    value <- list(value)
   }
   if (!all(vapply(value, is_named, logical(1)))) {
-    stop("`value` must be a list of named character vectors")
+    cli::cli_abort("{.arg {value}} must be a list of named character vectors.")
   }
 
   Map(`xml_attrs<-`, x, ns, value)

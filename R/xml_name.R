@@ -18,22 +18,7 @@
 #' z <- xml_children(y)
 #' xml_name(xml_children(y))
 xml_name <- function(x, ns = character()) {
-  UseMethod("xml_name")
-}
-
-#' @export
-xml_name.xml_missing <- function(x, ns = character()) {
-  NA_character_
-}
-
-#' @export
-xml_name.xml_nodeset <- function(x, ns = character()) {
-  vapply(x, xml_name, ns = ns, FUN.VALUE = character(1))
-}
-
-#' @export
-xml_name.xml_node <- function(x, ns = character()) {
-  .Call(node_name, x$node, ns)
+  .Call(node_name, x, ns)
 }
 
 #' Modify the (tag) name of an element
@@ -42,7 +27,7 @@ xml_name.xml_node <- function(x, ns = character()) {
 #' @rdname xml_name
 #' @export
 `xml_name<-` <- function(x, ns = character(), value) {
-   UseMethod("xml_name<-")
+  UseMethod("xml_name<-")
 }
 
 #' @export
@@ -57,7 +42,7 @@ xml_name.xml_node <- function(x, ns = character()) {
     return(x)
   }
   if (!is.list(ns)) {
-     ns <- list(ns)
+    ns <- list(ns)
   }
   Map(`xml_name<-`, x, ns, value)
   x

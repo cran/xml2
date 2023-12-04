@@ -1,7 +1,22 @@
-context("xml_name")
+test_that("xml_name() returns the name", {
+  x <- read_xml("<body>
+    <p>Some <b>text</b>.</p>
+    <p>Some <i>other</i>.</p>
+    <p>No bold text</p>
+    </body>")
+
+  children <- xml_children(x)
+  x <- xml_find_first(children, ".//b|.//i")
+
+  expect_equal(xml_name(x[[1]]), "b")
+  expect_equal(xml_name(x[[2]]), "i")
+  expect_equal(xml_name(x[[3]]), NA_character_)
+
+  expect_equal(xml_name(x), c("b", "i", NA_character_))
+})
 
 test_that("qualified names returned when ns given", {
-  x <- read_xml("ns-multiple-default.xml")
+  x <- read_xml(test_path("ns-multiple-default.xml"))
   ns <- xml_ns(x)
 
   bars <- xml_children(xml_children(x))
@@ -10,15 +25,15 @@ test_that("qualified names returned when ns given", {
 })
 
 test_that("error if missing ns spec", {
-  x <- read_xml("ns-multiple-default.xml")
+  x <- read_xml(test_path("ns-multiple-default.xml"))
   ns <- xml_ns(x)[1]
 
   bars <- xml_children(xml_children(x))
-  expect_error(xml_name(bars, ns), "Couldn't find prefix")
+  expect_snapshot_error(xml_name(bars, ns))
 })
 
 test_that("xml_name<- modifies the name", {
-  x <- read_xml("ns-multiple-default.xml")
+  x <- read_xml(test_path("ns-multiple-default.xml"))
   ns <- xml_ns(x)
 
   bars <- xml_children(xml_children(x))
@@ -42,7 +57,7 @@ test_that("xml_name<- modifies the name", {
 })
 
 test_that("xml_set_name modifies the name", {
-  x <- read_xml("ns-multiple-default.xml")
+  x <- read_xml(test_path("ns-multiple-default.xml"))
   ns <- xml_ns(x)
 
   bars <- xml_children(xml_children(x))
