@@ -9,7 +9,9 @@ test_that("download_xml fails if curl is not installed", {
 })
 
 test_that("read_xml errors with an empty document", {
-  expect_snapshot_error({read_xml(character())})
+  expect_snapshot(error = TRUE, {
+    read_xml(character())
+  })
 
   tf <- tempfile()
   file.create(tf)
@@ -20,18 +22,17 @@ test_that("read_xml errors with an empty document", {
 
 test_that("read_html correctly parses malformed document", {
   lego <- read_html(test_path("lego.html.bz2"))
-  expect_equal(length(xml_find_all(lego, ".//p")), 39)
+  expect_length(xml_find_all(lego, ".//p"), 39)
 })
 
 test_that("parse_options errors when given an invalid option", {
   expect_error(
     parse_options("INVALID", xml_parse_options()),
-    "`options` 'INVALID' is not a valid option"
+    '`options` "INVALID" is not a valid option'
   )
 
-  expect_error(
-    read_html(test_path("lego.html.bz2"), options = "INVALID"),
-    "`options` 'INVALID' is not a valid option"
+  expect_snapshot(error = TRUE,
+    read_html(test_path("lego.html.bz2"), options = "INVALID")
   )
 
   # Empty inputs returned as 0
@@ -69,7 +70,7 @@ test_that("read_xml works with httr response objects", {
 
   expect_s3_class(x, "xml_document")
 
-  expect_equal(length(xml_find_all(x, "//slide")), 2)
+  expect_length(xml_find_all(x, "//slide"), 2)
 })
 
 test_that("read_xml and read_html fail for bad status codes", {
@@ -105,7 +106,7 @@ test_that("read_html works with non-ASCII encodings", {
 })
 
 test_that("read_xml and read_html fail with > 1 input", {
-  expect_snapshot_error({
+  expect_snapshot(error = TRUE, {
     read_xml(c("foo", "bar"))
     read_html(c("foo", "bar"))
   })

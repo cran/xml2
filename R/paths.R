@@ -6,7 +6,7 @@ path_to_connection <- function(path, check = c("file", "dir")) {
   }
 
   if (is_url(path)) {
-    if (requireNamespace("curl", quietly = TRUE)) {
+    if (is_installed("curl")) {
       return(curl::curl(path))
     } else {
       return(url(path))
@@ -55,7 +55,7 @@ zipfile <- function(path, open = "r") {
   file <- files$Name[[1]]
 
   if (nrow(files) > 1) {
-    message("Multiple files in zip: reading '", file, "'")
+    cli::cli_inform("Multiple files in zip: reading {.file {file}}")
   }
 
   unz(path, file, open = open)

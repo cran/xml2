@@ -1,7 +1,4 @@
-#define R_NO_REMAP
 #include <Rinternals.h>
-#undef R_NO_REMAP
-
 #include <libxml/parser.h>
 #include <libxml/HTMLparser.h>
 #include "xml2_types.h"
@@ -127,7 +124,7 @@ extern "C" SEXP  xml_parse_options_() {
     "pedantic error reporting",
     "remove blank nodes",
     "use the SAX1 interface internally",
-    "Implement XInclude substitition",
+    "Implement XInclude substitution",
     "Forbid network access",
     "Do not reuse the context dictionary",
     "remove redundant namespaces declarations",
