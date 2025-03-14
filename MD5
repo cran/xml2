@@ -1,7 +1,7 @@
-b5fc15e9ce53dcf9bfb699d2359adc8d *DESCRIPTION
+688b8f2ffb0b3fd7b85e468489506d28 *DESCRIPTION
 41a6ad86ba30307f1996d7c5f7ff04c1 *LICENSE
 768d830db20987cd7be15cf66d9c8fa5 *NAMESPACE
-355adcebd9d9ae1ecbfd110ea018be5b *NEWS.md
+85a9275b52fb3be2d435329d8cb22c13 *NEWS.md
 e74f82ab7c4a8c140571ff8c0cda78f0 *R/S4.R
 51d755f13c31f653b209d2931ca7bfd5 *R/as_list.R
 da0f81aa45b7d9fef1883c5507c41d72 *R/as_xml_document.R
@@ -22,7 +22,7 @@ a61f83bf40043061a17a6d953ed0d7d7 *R/xml_find.R
 de4b647dc75292d296a0c40cb26a09f9 *R/xml_missing.R
 a3f0b18be37afb2ac0734ccead3d5342 *R/xml_modify.R
 95d651d844639721e325670820cd6c1b *R/xml_name.R
-95e1c3c99a6aeeb4623a9e6e2c2ee3f9 *R/xml_namespaces.R
+56c5f7bb3f03e369c569df03886b3cf6 *R/xml_namespaces.R
 3e13e9f4a016b66c8a920afbe825261f *R/xml_node.R
 e4ffd7d5d4b0b96b86c4fed93b10f92d *R/xml_nodeset.R
 d45ee76dc865db215a7f115cfa2eb750 *R/xml_parse.R
@@ -36,14 +36,14 @@ e9ecd84e1aaad6e4b4bfa03538ec6ecc *R/xml_structure.R
 72c35469cee0deff9d840815f95e34da *R/xml_write.R
 ba02edba719f666ae5dffeb962b215df *R/zzz.R
 1eeb04c8b462509da546276e25314ed3 *README.md
-468969b4ec7fd2f6627c2e0dd00f6ecc *build/partial.rdb
+615da519ee46859059a3d7b23d79ce72 *build/partial.rdb
 3e355ff1e55bbc1876e8f68afb536b32 *build/vignette.rds
 bc7baead3b6080f04dc81efd2fe1ff39 *cleanup
 1699de8e993b440def50aa36f944b15d *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 b235f9732bcfc5a47562b4996f54ebe7 *inst/doc/modification.R
 ab97096dd8d4f78a36e5289f70465741 *inst/doc/modification.Rmd
-3f125fec4ab5c7c21d85a6d97f57d7fd *inst/doc/modification.html
+111267c6cc3dac0d84ac5188577f1a16 *inst/doc/modification.html
 f8254da868eddec64a4768db0a43ae14 *inst/extdata/cd_catalog.xml
 aa42c312677d8bd431c9f6055bacc5a2 *inst/extdata/order-doc.xml
 d815540b17662ddb93faa91d78ba0e5f *inst/extdata/order-schema.xml
@@ -89,11 +89,11 @@ df6ed5e2ba9f87d0c1cb80591bce6616 *man/xml_text.Rd
 38ba6b30dd14531181f367e7cf8d5733 *man/xml_type.Rd
 376d10c9316a4b239468b2bff8c9b0c2 *man/xml_url.Rd
 f2db32908ff0cdc1fa672f77eb5c5e7b *man/xml_validate.Rd
-efc496b7fb8ad617f5fdbf90692a0384 *src/Makevars.in
-1b6d128b514a400b121bb639b0586236 *src/Makevars.win
+ea42ab6f581a11ff60730790852f706b *src/Makevars.in
+04256cefa36ab4410071227aa7a168af *src/Makevars.win
 d82933ffb58d1de029686abfa026a60c *src/connection.cpp
 6934f71b2430b31147a7bd5ad82242da *src/connection.h
-c997f988801890ae778829eb88a2f32b *src/init.c
+31625e3aa84582eaa356b96ce192669e *src/init.c
 36e081046feef1ba05db24eb5493517f *src/xml2_doc.cpp
 c97354348852a76107f79252b93cc1f8 *src/xml2_init.c
 5b6bfe70a53061667b0a6f3098901114 *src/xml2_namespace.cpp
@@ -101,7 +101,7 @@ c97354348852a76107f79252b93cc1f8 *src/xml2_init.c
 748a2f2072d7501e8bdeaebd28b741aa *src/xml2_output.cpp
 502fba90035ae354c40f4f13abe61342 *src/xml2_schema.cpp
 a9b3d304b79b90ae49e143f65c1e1122 *src/xml2_url.cpp
-bcb1e2c34866b335a56b0c1e616b54d1 *src/xml2_utils.h
+0a78890d33e581cf6576878462e92825 *src/xml2_utils.h
 444874bb949df4ee8352bbcb2edb6481 *src/xml2_xpath.cpp
 e349d5cc17d880f8096b30c2ec5d16c2 *tests/testthat.R
 0fe23a5132f0eff0560a13ef9eb1fc41 *tests/testthat/_snaps/xml_attr.md
@@ -147,5 +147,5 @@ aae406702f7489bc3dc3d42e1c72471b *tests/testthat/test-xml_serialize.R
 b4097f5b1f7f4ebccef1d561753ee26b *tests/testthat/test-xml_url.R
 634bb354e79cf3a396a6a9024d0ce20d *tests/testthat/test-xml_write.R
 6aa4dfbabc8fa0bff8367353966f5ac0 *tests/testthat/xml
-8ceaca1ea3322b3866951f7364886bc5 *tools/winlibs.R
+9e5de713f898fed1b22208495f3cc891 *tools/winlibs.R
 ab97096dd8d4f78a36e5289f70465741 *vignettes/modification.Rmd
