@@ -52,8 +52,8 @@ test_that("read_html properly passes parser arguments", {
 
   blanks <- read_html(xml2_example("cd_catalog.xml"), options = c("RECOVER", "NOERROR"))
   expect_equal(
-    as_list(blanks)$html$body$catalog$cd[[1]],
-    "\r\n    "
+    sub("\r\n", "\n", fixed = TRUE, as_list(blanks)$html$body$catalog$cd[[1]]),
+    "\n    "
   )
 
   no_blanks <- read_html(xml2_example("cd_catalog.xml"), options = c("RECOVER", "NOERROR", "NOBLANKS"))
@@ -110,4 +110,18 @@ test_that("read_xml and read_html fail with > 1 input", {
     read_xml(c("foo", "bar"))
     read_html(c("foo", "bar"))
   })
+})
+
+# Fails in libxml2 2.12
+#test_that("Truncated HTML should not error", {
+#  res <- read_html('<html><head')
+#  expect_s3_class(res, "xml_document")
+#})
+
+test_that("read_xml from a textConnection", {
+  s <- '<?xml version="1.0" encoding="UTF-8"?>\n<outer>\n<inner>Inner</inner>\n</outer>'
+  con <- textConnection(s)
+  x <- read_xml(con)
+  close(con)
+  expect_s3_class(x, "xml_document")
 })

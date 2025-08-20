@@ -69,7 +69,7 @@ read_xml <- function(x, encoding = "", ..., as_html = FALSE, options = "NOBLANKS
 read_html <- function(x,
                       encoding = "",
                       ...,
-                      options = c("RECOVER", "NOERROR", "NOBLANKS")) {
+                      options = c("RECOVER", "NOERROR", "NOBLANKS", "HUGE")) {
   UseMethod("read_html")
 }
 
@@ -77,7 +77,7 @@ read_html <- function(x,
 read_html.default <- function(x,
                               encoding = "",
                               ...,
-                              options = c("RECOVER", "NOERROR", "NOBLANKS")) {
+                              options = c("RECOVER", "NOERROR", "NOBLANKS", "HUGE")) {
   options <- parse_options(options, xml_parse_options())
 
   suppressWarnings(read_xml(x, encoding = encoding, ..., as_html = TRUE, options = options))
@@ -180,6 +180,14 @@ read_xml.response <- function(x,
     encoding = encoding, base_url = if (nzchar(base_url)) base_url else x$url,
     as_html = as_html, option = options, ...
   )
+}
+
+#' @export
+read_xml.textConnection <- function(x,
+                                    encoding = "",
+                                    ...) {
+  s <- paste(readLines(x), collapse = "\n")
+  read_xml.character(s, ...)
 }
 
 #' Download a HTML or XML file
