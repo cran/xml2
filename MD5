@@ -1,7 +1,7 @@
-20fb725bf9641f2de0b6afb595a2661e *DESCRIPTION
+7da324252efd95088032c9ff6a891710 *DESCRIPTION
 41a6ad86ba30307f1996d7c5f7ff04c1 *LICENSE
 5fd50f3190fd7b2ddc811a7cfa1fafb3 *NAMESPACE
-0a8d24a8e5c15087e6fa8b3b23b0d252 *NEWS.md
+f0558d1f2e2aaee12cc4eeca40663226 *NEWS.md
 e74f82ab7c4a8c140571ff8c0cda78f0 *R/S4.R
 469bc21c8365a20ce7c16e5f224a7992 *R/as_list.R
 064b105964e741c45cfeec92094212b0 *R/as_xml_document.R
@@ -10,7 +10,7 @@ fc260e2f2eac0847472990fb8fc053c6 *R/format.R
 c80a9eb1427c585807cecf618b6f3870 *R/import-standalone-obj-type.R
 17bb123964057b839a42eda1c3da214b *R/import-standalone-purrr.R
 c40f882046a958444c6058a9e2cb9a3b *R/import-standalone-types-check.R
-bae9ee74e31332f5970c42aa43b54565 *R/init.R
+88a5c7f3b77f8ae4c600013fc21378ff *R/init.R
 e25e3ee23d88b8e49df7d5e7ad4edca3 *R/nodeset_apply.R
 b865eebf49b90dbf0b3bfbe6f391ffd2 *R/paths.R
 896c15e606c518ddf9c1b427446f4c07 *R/utils.R
@@ -36,14 +36,14 @@ cd22826d3c615100a1db87e65374e03b *R/xml_path.R
 f896f09df32cbfb038508a1ca5932634 *R/xml_write.R
 ba02edba719f666ae5dffeb962b215df *R/zzz.R
 1eeb04c8b462509da546276e25314ed3 *README.md
-84609e0c676ae1f9abca525cbf4d8bd8 *build/partial.rdb
-9568e1d4ffc465fbbb460892987dd93c *build/vignette.rds
+759a2e57699f75bff86f92e5e4dc4324 *build/partial.rdb
+f03958c9e044447cba1a56f887abc3b8 *build/vignette.rds
 bc7baead3b6080f04dc81efd2fe1ff39 *cleanup
 2a0db422317500fe6f2f1063c8eed09e *configure
 d41d8cd98f00b204e9800998ecf8427e *configure.win
 71a38eae3f95f8b2f39df40c8219b1a1 *inst/doc/modification.R
 fc872bb6962861b716c4890b7e7a14e4 *inst/doc/modification.Rmd
-d6de400129518c19823a4e1fc8e75ca4 *inst/doc/modification.html
+a91e2148b7ceb2d3f45c39853cbfbf1c *inst/doc/modification.html
 f8254da868eddec64a4768db0a43ae14 *inst/extdata/cd_catalog.xml
 aa42c312677d8bd431c9f6055bacc5a2 *inst/extdata/order-doc.xml
 d815540b17662ddb93faa91d78ba0e5f *inst/extdata/order-schema.xml
@@ -95,7 +95,7 @@ d82933ffb58d1de029686abfa026a60c *src/connection.cpp
 6934f71b2430b31147a7bd5ad82242da *src/connection.h
 31625e3aa84582eaa356b96ce192669e *src/init.c
 3d43f2b2ba0a864509f23e80dbe3d03e *src/xml2_doc.cpp
-3db34c010c893ac04e71e44c58891f36 *src/xml2_init.c
+5d7271e26bdd85b360a4d3ec21749aa5 *src/xml2_init.c
 5b6bfe70a53061667b0a6f3098901114 *src/xml2_namespace.cpp
 9da560370051ff04da8d71d1dbb23588 *src/xml2_node.cpp
 0ebb75454e243c2e07a5255aa37cc135 *src/xml2_output.cpp
