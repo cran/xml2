@@ -1,6 +1,6 @@
 Package: xml2
 Title: Parse XML
-Version: 1.5.0
+Version: 1.5.1
 Authors@R: c(
     person("Hadley", "Wickham", role = "aut"),
     person("Jim", "Hester", role = "aut"),
@@ -35,7 +35,7 @@ Collate: 'S4.R' 'as_list.R' 'xml_parse.R' 'as_xml_document.R'
         'xml_url.R' 'xml_write.R' 'zzz.R'
 Config/testthat/edition: 3
 NeedsCompilation: yes
-Packaged: 2025-11-16 21:57:21 UTC; jeroen
+Packaged: 2025-12-01 13:01:48 UTC; jeroen
 Author: Hadley Wickham [aut],
   Jim Hester [aut],
   Jeroen Ooms [aut, cre],
@@ -43,4 +43,4 @@ Author: Hadley Wickham [aut],
   R Foundation [ctb] (Copy of R-project homepage cached as example)
 Maintainer: Jeroen Ooms <jeroenooms@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-11-17 06:10:02 UTC
+Date/Publication: 2025-12-01 14:40:02 UTC
